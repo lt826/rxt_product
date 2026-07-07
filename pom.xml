@@ -8,8 +8,7 @@
         <version>3.2.5</version>  <!-- 改为稳定的 3.2.x 版本 -->
         <relativePath/>
     </parent>
-    <groupId>com.qxt</groupId>
-    <artifactId>RongXiaoTong</artifactId>
+    <groupIdtId>RongXiaoTong</artifactId>
     <version>1.0-SNAPSHOT</version>
     <name>RongXiaoTong</name>
     <description>RongXiaoTong</description>
