@@ -47,3 +47,9 @@ mybatis:
 file:
   location:
     directory: /usr/local/learn/docker/nginx/html/
+# 支付宝 appId,私钥,支付宝公钥
+alipay:
+  info:
+    appId:
+    privateKey:
+    alipayPublicKey:
