@@ -1,4 +1,4 @@
-package com.qxt.crop.common;
+package com.qst.crop.common;
 
 import java.io.Serial;
 import java.io.Serializable;

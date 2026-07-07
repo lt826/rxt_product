@@ -1,4 +1,4 @@
-package com.qxt.crop.common;
+package com.qst.crop.common;
 
 public class StatusCode {
     private static final int OK = 20000;     //成功
