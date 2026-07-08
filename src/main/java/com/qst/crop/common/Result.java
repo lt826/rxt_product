@@ -1,67 +1,26 @@
 package com.qst.crop.common;
 
-import java.io.Serial;
-import java.io.Serializable;
+import lombok.Data;
 
-public class Result<T> implements Serializable {
+@Data
+public class Result<T> {
+    private Integer code;
+    private String message;
+    private T data;
 
-    private boolean flag;  //是否成功
-    private Integer code;  //返回码
-    private String message; //返回消息
-    private T data;  //返回数据
-
-    public Result(boolean flag,Integer code,String message){
-        this.flag = flag;
-        this.code = code;
-        this.message = message;
+    public static <T> Result<T> success(String message, T data) {
+        Result<T> result = new Result<>();
+        result.setCode(200);
+        result.setMessage(message);
+        result.setData(data);
+        return result;
     }
 
-    public Result(boolean flag,Integer code,String message,T data){
-        this.flag = flag;
-        this.code = code;
-        this.message = message;
-        this.data = data;
-    }
-
-    @Override
-    public String toString() {
-        return "Result{" +
-                "flag=" + flag +
-                ", code=" + code +
-                ", message='" + message + '\'' +
-                ", data=" + data +
-                '}';
-    }
-
-    public boolean isFlag() {
-        return flag;
-    }
-
-    public void setFlag(boolean flag) {
-        this.flag = flag;
-    }
-
-    public Integer getCode() {
-        return code;
-    }
-
-    public void setCode(Integer code) {
-        this.code = code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public T getData() {
-        return data;
-    }
-
-    public void setData(T data) {
-        this.data = data;
+    public static <T> Result<T> error(Integer code, String message) {
+        Result<T> result = new Result<>();
+        result.setCode(code);
+        result.setMessage(message);
+        result.setData(null);
+        return result;
     }
 }
