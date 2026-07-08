@@ -1,4 +1,4 @@
-import request from './index'
+﻿import request from './index'
 
 export function applyFinanceAPI(data) {
   return request({
@@ -28,4 +28,13 @@ export function getRecommendPartnersAPI(amount, item) {
     method: 'get',
     params: { amount, item }
   })
+}
+
+// ====== 银行端 API ======
+export function getAllFinancesAPI() {
+  return request({ url: '/api/v1/finance/bank/list', method: 'get' })
+}
+
+export function updateFinanceStatusAPI(id, status, remark) {
+  return request({ url: `/api/v1/finance/${id}/status`, method: 'put', data: { status, remark } })
 }

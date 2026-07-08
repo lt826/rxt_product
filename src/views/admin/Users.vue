@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getUsersAPI, createUserAPI, updateUserAPI, deleteUserAPI } from '../../api/admin'
+import { getUsersAPI, getUserDetailAPI, createUserAPI, updateUserAPI, deleteUserAPI } from '../../api/admin'
 
 const users = ref([])
 const loading = ref(false)
@@ -10,6 +10,11 @@ const searchForm = ref({ keyword: '', role: '', status: '' })
 const dialogVisible = ref(false)
 const editingUser = ref({ userName: '', nickName: '', phone: '', role: '', realName: '' })
 const isEdit = ref(false)
+
+// 用户详情抽屉
+const detailVisible = ref(false)
+const detailUser = ref(null)
+const detailLoading = ref(false)
 
 async function loadUsers() {
   loading.value = true
@@ -23,13 +28,29 @@ async function loadUsers() {
         phone: u.phone || '-',
         realName: u.realName || '-',
         status: '正常',
-        regDate: u.createTime ? u.createTime.substring(0, 10) : '-'
+        regDate: u.createTime ? u.createTime.substring(0, 10) : '-',
+        _raw: u
       }))
     }
   } catch (e) {
     ElMessage.error('获取用户列表失败')
   } finally {
     loading.value = false
+  }
+}
+
+async function showDetail(row) {
+  detailLoading.value = true
+  detailVisible.value = true
+  try {
+    const res = await getUserDetailAPI(row.userName)
+    if (res.code === 200) {
+      detailUser.value = res.data
+    }
+  } catch (e) {
+    ElMessage.error('获取用户详情失败')
+  } finally {
+    detailLoading.value = false
   }
 }
 
@@ -105,7 +126,7 @@ onMounted(loadUsers)
           <el-button type="primary" size="small" @click="openCreate">新增用户</el-button>
         </div>
       </template>
-      <el-table :data="users" v-loading="loading" border stripe>
+      <el-table :data="users" v-loading="loading" border stripe @row-click="showDetail">
         <el-table-column prop="userName" label="用户名" />
         <el-table-column prop="name" label="昵称" />
         <el-table-column prop="realName" label="真实姓名" />
@@ -114,14 +135,34 @@ onMounted(loadUsers)
         </el-table-column>
         <el-table-column prop="phone" label="手机号" />
         <el-table-column prop="regDate" label="注册时间" width="120" />
-        <el-table-column label="操作" width="150">
+        <el-table-column label="操作" width="150" @click.stop>
           <template #default="{row}">
-            <el-button size="small" type="primary" link @click="openEdit(row)">编辑</el-button>
-            <el-button size="small" type="danger" link @click="deleteUser(row)">删除</el-button>
+            <el-button size="small" type="primary" link @click.stop="openEdit(row)">编辑</el-button>
+            <el-button size="small" type="danger" link @click.stop="deleteUser(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
     </el-card>
+
+    <!-- 用户详情抽屉 -->
+    <el-drawer v-model="detailVisible" title="用户详情" size="400px" v-loading="detailLoading">
+      <template v-if="detailUser">
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="用户名">{{ detailUser.userName }}</el-descriptions-item>
+          <el-descriptions-item label="昵称">{{ detailUser.nickName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="真实姓名">{{ detailUser.realName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="手机号">{{ detailUser.phone || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="角色">{{ detailUser.role }}</el-descriptions-item>
+          <el-descriptions-item label="积分">{{ detailUser.integral ?? '-' }}</el-descriptions-item>
+          <el-descriptions-item label="信用分">{{ detailUser.credit ?? '-' }}</el-descriptions-item>
+          <el-descriptions-item label="身份证号">{{ detailUser.identityNum || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="注册时间">{{ detailUser.createTime ? detailUser.createTime.substring(0, 10) : '-' }}</el-descriptions-item>
+        </el-descriptions>
+      </template>
+      <template #footer>
+        <el-button @click="detailVisible = false">关闭</el-button>
+      </template>
+    </el-drawer>
 
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑用户' : '新增用户'" width="500px">
       <el-form label-width="100px">

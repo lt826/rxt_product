@@ -2,8 +2,10 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { askQuestionAPI, getMyQuestionsAPI } from '../../api/question'
+import { listExperts } from '../../api/expert'
 
 const questions = ref([])
+const experts = ref([])
 const loading = ref(false)
 const submitting = ref(false)
 
@@ -13,6 +15,17 @@ const form = ref({
   question: '',
   plantName: ''
 })
+
+async function loadExperts() {
+  try {
+    const res = await listExperts()
+    if (res.code === 200) {
+      experts.value = res.data || []
+    }
+  } catch (e) {
+    // 忽略，选择框显示空
+  }
+}
 
 async function loadQuestions() {
   loading.value = true
@@ -25,9 +38,17 @@ async function loadQuestions() {
         question: q.question,
         answer: q.answer,
         expert: q.expertName || '待分配',
+        expertRealName: '',
         date: '-',
         status: q.status
       }))
+      // 用专家列表补全真实姓名
+      if (experts.value.length) {
+        const expertMap = Object.fromEntries(experts.value.map(e => [e.userName, e.realName]))
+        questions.value.forEach(q => {
+          q.expertRealName = expertMap[q.expert] || q.expert
+        })
+      }
     }
   } catch (e) {
     // 忽略
@@ -41,12 +62,16 @@ async function handleSubmit() {
     ElMessage.warning('请填写问题标题和描述')
     return
   }
+  if (!form.value.expertName) {
+    ElMessage.warning('请选择要提问的专家')
+    return
+  }
   submitting.value = true
   try {
     const res = await askQuestionAPI({
       title: form.value.title,
       question: form.value.question,
-      expertName: form.value.expertName || undefined,
+      expertName: form.value.expertName,
       plantName: form.value.plantName || undefined
     })
     if (res.code === 200) {
@@ -61,7 +86,10 @@ async function handleSubmit() {
   }
 }
 
-onMounted(loadQuestions)
+onMounted(async () => {
+  await loadExperts()
+  await loadQuestions()
+})
 </script>
 
 <template>
@@ -70,6 +98,16 @@ onMounted(loadQuestions)
     <el-card style="margin-bottom:20px">
       <template #header><span>向专家提问</span></template>
       <el-form>
+        <el-form-item label="选择专家" required>
+          <el-select v-model="form.expertName" placeholder="请选择要咨询的专家" style="width:100%">
+            <el-option
+              v-for="ex in experts"
+              :key="ex.userName"
+              :label="`${ex.realName}（${ex.profession || ''}）`"
+              :value="ex.userName"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="作物名称">
           <el-input v-model="form.plantName" placeholder="如：水稻、西红柿等" />
         </el-form-item>
@@ -89,9 +127,9 @@ onMounted(loadQuestions)
       <template #header><span>我的提问</span></template>
       <div v-for="q in questions" :key="q.id" class="qa-item">
         <div class="qa-question">{{ q.title }}</div>
+        <div class="qa-meta">提问给：{{ q.expertRealName || q.expert }}</div>
         <div class="qa-answer" v-if="q.answer">答：{{ q.answer }}</div>
         <el-tag v-else size="small" type="info">待回复</el-tag>
-        <div class="qa-meta">{{ q.date }} · {{ q.expert }}</div>
       </div>
       <el-empty v-if="!loading && questions.length === 0" description="暂无提问记录" />
     </el-card>
