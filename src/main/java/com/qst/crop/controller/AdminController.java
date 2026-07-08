@@ -1,0 +1,67 @@
+package com.qst.crop.controller;
+
+import com.qst.crop.common.Result;
+import com.qst.crop.entity.User;
+import com.qst.crop.service.AdminService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/v1/admin")
+public class AdminController {
+
+    @Autowired
+    private AdminService adminService;
+
+    @GetMapping("/users")
+    public Result<List<User>> getAllUsers() {
+        List<User> list = adminService.getAllUsers();
+        return Result.success("查询成功", list);
+    }
+
+    @GetMapping("/users/{userName}")
+    public Result<User> getUserDetail(@PathVariable String userName) {
+        User user = adminService.getUserByUserName(userName);
+        if (user == null) {
+            return Result.error(404, "用户不存在");
+        }
+        return Result.success("查询成功", user);
+    }
+
+    @PostMapping("/users")
+    public Result<String> createUser(@RequestBody User user) {
+        boolean success = adminService.createUser(user);
+        if (success) {
+            return Result.success("创建用户成功", null);
+        }
+        return Result.error(400, "用户名已存在");
+    }
+
+    @PutMapping("/users/{userName}")
+    public Result<String> updateUser(@PathVariable String userName, @RequestBody User user) {
+        user.setUserName(userName);
+        boolean success = adminService.updateUser(user);
+        if (success) {
+            return Result.success("更新成功", null);
+        }
+        return Result.error(404, "用户不存在");
+    }
+
+    @DeleteMapping("/users/{userName}")
+    public Result<String> deleteUser(@PathVariable String userName) {
+        boolean success = adminService.deleteUser(userName);
+        if (success) {
+            return Result.success("删除成功", null);
+        }
+        return Result.error(404, "用户不存在");
+    }
+
+    @GetMapping("/stats/overview")
+    public Result<Map<String, Object>> getStatsOverview() {
+        Map<String, Object> stats = adminService.getStatsOverview();
+        return Result.success("查询成功", stats);
+    }
+}
