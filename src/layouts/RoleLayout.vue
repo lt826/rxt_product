@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
@@ -101,7 +101,7 @@ async function handleLogout() {
     <el-aside width="220px" class="role-sidebar">
       <div class="sidebar-header" @click="goHome">
         <div class="logo">🌾</div>
-        <span class="title">rxt</span>
+        <span class="title">融销通</span>
       </div>
       <div class="role-badge">{{ roleTitle }}</div>
       <el-menu

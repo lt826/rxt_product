@@ -1,15 +1,19 @@
 ﻿<script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getMyFinancesAPI } from '../../api/finance'
+import { getMyQuestionsAPI } from '../../api/question'
 
 const router = useRouter()
 
 const stats = ref([
   { label: '可申请融资产品', value: '6', color: '#409eff' },
-  { label: '进行中的申请', value: '2', color: '#67c23a' },
-  { label: '待处理消息', value: '3', color: '#e6a23c' },
-  { label: '未读通知', value: '1', color: '#f56c6c' }
+  { label: '进行中的申请', value: '-', color: '#67c23a' },
+  { label: '我的提问', value: '-', color: '#e6a23c' },
+  { label: '待回复问题', value: '-', color: '#f56c6c' }
 ])
+
+const recentActivities = ref([])
 
 const quickActions = [
   { label: '申请融资', icon: 'Coin', path: '/farmer/financing' },
@@ -17,6 +21,43 @@ const quickActions = [
   { label: '咨询专家', icon: 'ChatDotSquare', path: '/farmer/expert-qa' },
   { label: '查看消息', icon: 'Bell', path: '/farmer/messages' }
 ]
+
+onMounted(async () => {
+  try {
+    const [financeRes, questionRes] = await Promise.allSettled([
+      getMyFinancesAPI(),
+      getMyQuestionsAPI()
+    ])
+
+    const finances = financeRes.value?.code === 200 ? financeRes.value.data || [] : []
+    const questions = questionRes.value?.code === 200 ? questionRes.value.data || [] : []
+
+    const pendingFinances = finances.filter(f => f.status === 0 || f.status === '0')
+    const unansweredQuestions = questions.filter(q => !q.answer)
+
+    stats.value = [
+      { label: '可申请融资产品', value: '6', color: '#409eff' },
+      { label: '进行中的申请', value: String(pendingFinances.length), color: '#67c23a' },
+      { label: '我的提问', value: String(questions.length), color: '#e6a23c' },
+      { label: '待回复问题', value: String(unansweredQuestions.length), color: '#f56c6c' }
+    ]
+
+    const activities = []
+    finances.slice(0, 3).forEach(f => {
+      const time = f.createTime ? f.createTime.substring(0, 10) : '-'
+      const statusText = f.status === 0 || f.status === '0' ? '融资申请已提交，等待银行审核' : '融资申请已处理'
+      activities.push({ time, text: statusText, type: 'primary' })
+    })
+    questions.slice(0, 3).forEach(q => {
+      const time = '-'
+      const text = q.answer ? `您的问题"${q.title}"已获得专家回复` : `您的问题"${q.title}"等待专家回答`
+      activities.push({ time, text, type: q.answer ? 'success' : 'info' })
+    })
+    recentActivities.value = activities.slice(0, 5)
+  } catch (e) {
+    // 保持默认值
+  }
+})
 </script>
 
 <template>
@@ -39,9 +80,8 @@ const quickActions = [
     <el-card class="section-card">
       <template #header><span>最近动态</span></template>
       <el-timeline>
-        <el-timeline-item timestamp="2026-07-08" type="primary">融资申请已提交，等待银行审核</el-timeline-item>
-        <el-timeline-item timestamp="2026-07-07" type="success">您咨询的问题已获得专家回复</el-timeline-item>
-        <el-timeline-item timestamp="2026-07-06">订单 #20260706 已发货</el-timeline-item>
+        <el-timeline-item v-for="act in recentActivities" :key="act.text" :timestamp="act.time" :type="act.type || ''">{{ act.text }}</el-timeline-item>
+        <el-timeline-item v-if="recentActivities.length === 0" timestamp="暂无">尚无动态数据，请先进行操作</el-timeline-item>
       </el-timeline>
     </el-card>
   </div>

@@ -87,7 +87,7 @@ async function handleRegister() {
   <div class="register-page">
     <div class="register-card">
       <div class="register-header">
-        <div class="logo">🌾 rxt</div>
+        <div class="logo">🌾 融销通</div>
         <h2>创建账号</h2>
         <p>注册后即可使用各模块功能</p>
       </div>

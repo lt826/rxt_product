@@ -20,14 +20,14 @@ function enterRole(roleId) {
   <div class="landing">
     <header class="landing-header">
       <div class="header-inner">
-        <div class="logo">🌾 rxt</div>
+        <div class="logo">🌾 融销通</div>
         <el-button type="primary" @click="router.push('/login')">登录</el-button>
       </div>
     </header>
 
     <section class="hero">
-      <h1>农业产融服务平台</h1>
-      <p class="subtitle">连接农户、买家、银行与专家，让农业金融更高效</p>
+      <h1>基于数字经济的农产品融销一体平台</h1>
+      <p class="subtitle">融通资金 · 链接产销 · 智汇农业 —— 农户、买家、银行、专家一站式协同平台</p>
     </section>
 
     <section class="roles">

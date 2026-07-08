@@ -58,7 +58,7 @@ function goToRegister() {
   <div class="login-page">
     <div class="login-card">
       <div class="login-header">
-        <div class="logo">🌾 rxt</div>
+        <div class="logo">🌾 融销通</div>
         <h2>欢迎回来</h2>
         <p>请选择角色并输入账号密码登录</p>
       </div>
