@@ -10,4 +10,10 @@ public interface FinanceService {
     Finance apply(String userName, FinanceApplyDTO dto);
     List<Finance> getMyFinances(String userName);
     Finance getFinanceById(Integer financeId);
+    /** 获取所有融资申请（银行用） */
+    List<Finance> getAllFinances();
+
+    /** 审核融资申请 */
+    boolean updateFinanceStatus(Integer financeId, Integer status, String remark);
 }
+

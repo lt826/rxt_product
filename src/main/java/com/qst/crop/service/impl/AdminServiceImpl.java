@@ -1,9 +1,11 @@
 package com.qst.crop.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.qst.crop.dao.ExpertMapper;
 import com.qst.crop.dao.FinanceMapper;
 import com.qst.crop.dao.PurchaseMapper;
 import com.qst.crop.dao.UserMapper;
+import com.qst.crop.entity.Expert;
 import com.qst.crop.entity.Finance;
 import com.qst.crop.entity.User;
 import com.qst.crop.service.AdminService;
@@ -27,6 +29,9 @@ public class AdminServiceImpl implements AdminService {
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private ExpertMapper expertMapper;
 
     @Autowired
     private FinanceMapper financeMapper;
@@ -57,6 +62,20 @@ public class AdminServiceImpl implements AdminService {
         if (user.getIntegral() == null) user.setIntegral(0);
         if (user.getCredit() == null) user.setCredit(0);
         int result = userMapper.insert(user);
+        if (result > 0 && "expert".equalsIgnoreCase(user.getRole())) {
+            Expert expert = new Expert();
+            expert.setUserName(user.getUserName());
+            expert.setRealName(user.getRealName());
+            expert.setPhone(user.getPhone());
+            expert.setProfession("农业技术");
+            expert.setPosition("专家");
+            expert.setBelong("融销通平台");
+            try {
+                expertMapper.insert(expert);
+            } catch (Exception e) {
+                log.warn("创建专家信息失败（不影响用户创建）: {}", e.getMessage());
+            }
+        }
         return result > 0;
     }
 
@@ -76,12 +95,9 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public Map<String, Object> getStatsOverview() {
         Map<String, Object> stats = new HashMap<>();
-
-        // 用户总数
         long totalUsers = userMapper.selectCount(null);
         stats.put("totalUsers", totalUsers);
 
-        // 各角色用户数
         List<User> allUsers = userMapper.selectList(null);
         Map<String, Long> roleCounts = new HashMap<>();
         for (User u : allUsers) {
@@ -101,7 +117,6 @@ public class AdminServiceImpl implements AdminService {
         stats.put("activeExperts", experts);
         stats.put("activeAdmins", admins);
 
-        // 用户分布数据（前端图表用）
         String[][] colorMap = {
             {"farmer", "农户", "#409eff"},
             {"buyer", "买家", "#67c23a"},
@@ -124,11 +139,9 @@ public class AdminServiceImpl implements AdminService {
         }
         stats.put("userDistribution", distribution);
 
-        // 融资数据
         long totalFinances = financeMapper.selectCount(null);
         stats.put("totalFinances", totalFinances);
 
-        // 已通过融资金额（总额）
         QueryWrapper<Finance> approvedQuery = new QueryWrapper<>();
         approvedQuery.eq("status", 2).or().eq("status", "2");
         List<Finance> approvedFinances = financeMapper.selectList(approvedQuery);
@@ -137,14 +150,12 @@ public class AdminServiceImpl implements AdminService {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
         stats.put("totalFinancing", totalFinancingAmount);
 
-        // 通过率
         long approved = approvedFinances.size();
         double approvalRate = totalFinances > 0
             ? BigDecimal.valueOf(approved * 100.0 / totalFinances).setScale(1, RoundingMode.HALF_UP).doubleValue()
             : 0;
         stats.put("approvalRate", approvalRate);
 
-        // 月度融资趋势
         QueryWrapper<Finance> allFinanceQuery = new QueryWrapper<>();
         allFinanceQuery.orderByAsc("create_time");
         List<Finance> allFinances = financeMapper.selectList(allFinanceQuery);
@@ -179,7 +190,6 @@ public class AdminServiceImpl implements AdminService {
         }
         stats.put("monthlyTrend", monthlyTrend);
 
-        // 订单总数
         long totalOrders = purchaseMapper.selectCount(null);
         stats.put("totalOrders", totalOrders);
 

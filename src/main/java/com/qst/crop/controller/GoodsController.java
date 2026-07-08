@@ -18,7 +18,7 @@ public class GoodsController {
 
     @GetMapping("/list")
     public Result<List<Goods>> list(
-            @RequestParam String type,
+            @RequestParam(required = false) String type,
             @RequestParam(required = false) String keyword) {
         return Result.success("查询成功", goodsService.listByType(type, keyword));
     }
@@ -26,6 +26,24 @@ public class GoodsController {
     @GetMapping("/detail/{id}")
     public Result<Goods> detail(@PathVariable Integer id) {
         return Result.success("查询成功", goodsService.detail(id));
+    }
+
+    @GetMapping("/{id}")
+    public Result<Goods> getById(@PathVariable Integer id) {
+        return Result.success("查询成功", goodsService.detail(id));
+    }
+
+    @PutMapping("/{id}")
+    public Result<Goods> updateById(@PathVariable Integer id, @RequestBody Goods goods) {
+        goods.setGoodsId(id);
+        goods.setOwnName(SecurityUtil.getCurrentUsername());
+        return Result.success("修改成功", goodsService.update(goods));
+    }
+
+    @DeleteMapping("/{id}")
+    public Result<Boolean> deleteById(@PathVariable Integer id) {
+        boolean ok = goodsService.delete(id, SecurityUtil.getCurrentUsername());
+        return ok ? Result.success("删除成功", true) : Result.error(404, "信息不存在");
     }
 
     @PostMapping("/publish")

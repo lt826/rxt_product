@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/finance")
@@ -47,5 +48,18 @@ public class FinanceController {
             return Result.error(404, "融资申请不存在");
         }
         return Result.success("查询成功", finance);
+    }
+
+    @GetMapping("/bank/list")
+    public Result<List<Finance>> getAllFinances() {
+        return Result.success("查询成功", financeService.getAllFinances());
+    }
+
+    @PutMapping("/{id}/status")
+    public Result<Boolean> updateStatus(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
+        Integer status = (Integer) body.get("status");
+        String remark = (String) body.getOrDefault("remark", "");
+        boolean ok = financeService.updateFinanceStatus(id, status, remark);
+        return ok ? Result.success("操作成功", true) : Result.error(404, "融资申请不存在");
     }
 }

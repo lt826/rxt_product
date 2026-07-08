@@ -57,10 +57,10 @@ public class FinanceServiceImpl implements FinanceService {
     @Override
     public Finance apply(String userName, FinanceApplyDTO dto) {
         Finance finance = new Finance();
-        finance.setBankId(dto.getBankId());
+        if (dto.getBankId() != null) finance.setBankId(dto.getBankId());
         finance.setOwnName(userName);
         finance.setMoney(dto.getMoney());
-        finance.setRate(dto.getRate());
+        if (dto.getRate() != null) finance.setRate(dto.getRate());
         finance.setRepayment(dto.getRepayment());
         finance.setCombinationName1(dto.getCombinationName1());
         finance.setCombinationPhone1(dto.getCombinationPhone1());
@@ -98,5 +98,24 @@ public class FinanceServiceImpl implements FinanceService {
     @Override
     public Finance getFinanceById(Integer financeId) {
         return financeMapper.selectById(financeId);
+    }
+    
+
+    @Override
+    public List<Finance> getAllFinances() {
+        QueryWrapper<Finance> wrapper = new QueryWrapper<>();
+        wrapper.orderByDesc("create_time");
+        return financeMapper.selectList(wrapper);
+    }
+
+    @Override
+    public boolean updateFinanceStatus(Integer financeId, Integer status, String remark) {
+        Finance finance = financeMapper.selectById(financeId);
+        if (finance == null) return false;
+        finance.setStatus(status);
+        finance.setRemark(remark);
+        finance.setUpdateTime(LocalDateTime.now());
+        financeMapper.updateById(finance);
+        return true;
     }
 }

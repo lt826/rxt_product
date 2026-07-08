@@ -18,4 +18,9 @@ public class ExpertServiceImpl implements ExpertService {
     public List<Expert> listAll() {
         return expertMapper.selectList(null);
     }
+
+    @Override
+    public boolean createExpert(Expert expert) {
+        return expertMapper.insert(expert) > 0;
+    }
 }
