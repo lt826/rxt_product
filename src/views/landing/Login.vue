@@ -15,7 +15,7 @@ const formRef = ref(null)
 const form = reactive({
   username: route.query.username || '',
   password: '',
-  role: 'farmer'
+  role: route.query.role || 'farmer'
 })
 
 const roles = [
@@ -39,7 +39,9 @@ async function handleLogin() {
   loading.value = true
   try {
     const data = await userStore.login(form)
-    router.push(`/${data.role}/dashboard`)
+    // 优先用后端返回的角色，兜底用用户选择的角色
+    const targetRole = data.role || form.role
+    router.push(`/${targetRole}/dashboard`)
   } catch (e) {
     // error already handled in store
   } finally {

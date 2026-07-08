@@ -95,23 +95,40 @@ const router = createRouter({
 })
 
 // 路由导航守卫：需要登录才能访问的页面自动跳转到登录页
-router.beforeEach((to, from, next) => {
-  if (to.meta.requiresAuth) {
-    const token = localStorage.getItem('rxt_token')
-    if (!token) {
-      next({ path: '/login', query: { redirect: to.fullPath } })
-      return
-    }
+const VALID_ROLES = ['farmer', 'buyer', 'bank', 'expert', 'admin']
+const homePath = (role) => `/${role}/dashboard`
 
-    // 如果路由指定了角色，校验用户角色是否匹配
-    if (to.meta.role) {
-      const userInfo = JSON.parse(localStorage.getItem('rxt_user') || 'null')
-      if (userInfo && userInfo.role !== to.meta.role) {
-        next({ path: `/${userInfo.role}/dashboard` })
-        return
-      }
-    }
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('rxt_token')
+  let userInfo = null
+  try {
+    userInfo = JSON.parse(localStorage.getItem('rxt_user') || 'null')
+  } catch (e) {
+    userInfo = null
   }
+  const role = userInfo && userInfo.role ? String(userInfo.role).toLowerCase() : null
+  const isValidRole = role && VALID_ROLES.includes(role)
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
+
+  if (requiresAuth && !token) {
+    return next({ path: '/login', query: { redirect: to.fullPath } })
+  }
+
+  if (token && !isValidRole && (requiresAuth || to.path === '/login')) {
+    localStorage.removeItem('rxt_token')
+    localStorage.removeItem('rxt_user')
+    if (to.path === '/login') return next()
+    return next({ path: '/login' })
+  }
+
+  if (to.path === '/login' && isValidRole) {
+    return next({ path: homePath(role) })
+  }
+
+  if (isValidRole && to.meta.role && to.meta.role !== role) {
+    return next({ path: homePath(role) })
+  }
+
   next()
 })
 

@@ -19,12 +19,17 @@ export const useUserStore = defineStore('user', () => {
       role: credentials.role
     })
     if (res.code === 200) {
-      token.value = res.data.token
-      userInfo.value = res.data
-      localStorage.setItem('rxt_token', res.data.token)
-      localStorage.setItem('rxt_user', JSON.stringify(res.data))
+      // 后端角色可能返回大写（如 FARMER），统一转小写以匹配前端路由
+      const data = { ...res.data }
+      if (data.role) {
+        data.role = String(data.role).toLowerCase()
+      }
+      token.value = data.token
+      userInfo.value = data
+      localStorage.setItem('rxt_token', data.token)
+      localStorage.setItem('rxt_user', JSON.stringify(data))
       ElMessage.success('登录成功')
-      return res.data
+      return data
     } else {
       ElMessage.error(res.message || '登录失败')
       throw new Error(res.message)

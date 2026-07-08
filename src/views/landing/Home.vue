@@ -12,7 +12,7 @@ const roles = [
 ]
 
 function enterRole(roleId) {
-  router.push('/login')
+  router.push({ path: '/login', query: { role: roleId } })
 }
 </script>
 
