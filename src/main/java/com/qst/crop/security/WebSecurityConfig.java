@@ -7,6 +7,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
@@ -15,6 +16,9 @@ public class WebSecurityConfig {
 
     @Autowired
     private CorsConfigurationSource corsConfigurationSource;
+
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -33,8 +37,12 @@ public class WebSecurityConfig {
                 // 权限控制
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/user/login").permitAll()
+                        .requestMatchers("/api/v1/user/register").permitAll()
                         .anyRequest().authenticated()
                 )
+
+                // JWT 过滤器
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 
                 // 禁用表单登录和 HTTP Basic
                 .formLogin(form -> form.disable())
