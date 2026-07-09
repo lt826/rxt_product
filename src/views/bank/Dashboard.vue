@@ -1,6 +1,9 @@
 <template>
   <div>
     <h2 class="page-title">银行工作台</h2>
+
+    <ProfileCard v-if="userName" :user-name="userName" />
+
     <div class="stats-grid" v-loading="loading">
       <div class="stat-card"><div class="stat-value" style="color:#409eff">{{ stats.totalPending }}</div><div class="stat-label">待审批申请</div></div>
       <div class="stat-card"><div class="stat-value" style="color:#67c23a">{{ stats.todayProcessed }}</div><div class="stat-label">本日处理</div></div>
@@ -14,9 +17,14 @@
   </div>
 </template>
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getAllFinancesAPI, updateFinanceStatusAPI } from '../../api/finance'
+import { useUserStore } from '../../stores/user'
+import ProfileCard from '../../components/ProfileCard.vue'
+
+const userStore = useUserStore()
+const userName = computed(() => userStore.userInfo?.userName || '')
 
 const loading = ref(false)
 const stats = reactive({ totalPending: 0, todayProcessed: 0, activeProducts: 0, monthlyTotal: '¥0' })

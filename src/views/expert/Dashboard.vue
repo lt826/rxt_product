@@ -1,8 +1,13 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { listQuestionsForExpert } from '../../api/question'
 import { listReservesForExpert } from '../../api/reserve'
+import { useUserStore } from '../../stores/user'
+import ProfileCard from '../../components/ProfileCard.vue'
+
+const userStore = useUserStore()
+const userName = computed(() => userStore.userInfo?.userName || '')
 
 const router = useRouter()
 
@@ -52,6 +57,9 @@ onMounted(async () => {
 <template>
   <div>
     <h2 class="page-title">专家工作台</h2>
+
+    <ProfileCard v-if="userName" :user-name="userName" />
+
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-value" style="color:#e6a23c">{{ pendingQuestions }}</div>

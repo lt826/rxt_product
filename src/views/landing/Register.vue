@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../../stores/user'
@@ -29,6 +29,11 @@ const roles = [
   { value: 'expert', label: '农业专家' },
   { value: 'admin', label: '平台管理员' }
 ]
+
+// 判断是否需要审批
+const needsApproval = computed(() => {
+  return ['bank', 'expert', 'admin'].includes(form.role)
+})
 
 const rules = {
   userName: [{ required: true, message: '请输入账号', trigger: 'blur' }],
@@ -73,7 +78,12 @@ async function handleRegister() {
       address: form.address,
       role: form.role
     })
-    ElMessage.success('注册成功，请登录')
+
+    if (needsApproval.value) {
+      ElMessage.success('注册申请已提交，请等待管理员审批')
+    } else {
+      ElMessage.success('注册成功，请登录')
+    }
     router.push({ path: '/login', query: { username: form.userName } })
   } catch (e) {
     // error already handled in store
@@ -145,6 +155,14 @@ async function handleRegister() {
             <el-option v-for="r in roles" :key="r.value" :label="r.label" :value="r.value" />
           </el-select>
         </el-form-item>
+
+        <!-- 审批提示 -->
+        <el-alert v-if="needsApproval" type="warning" :closable="false" show-icon style="margin-bottom: 16px;">
+          <template #title>
+            ⚠️ 该角色需要管理员审批
+          </template>
+          <p style="margin: 4px 0 0;">注册后需等待管理员审批才能登录，请留意登录页面的状态提示。</p>
+        </el-alert>
 
         <el-button type="primary" style="width:100%; margin-top: 8px;" :loading="loading" @click="handleRegister">
           注 册

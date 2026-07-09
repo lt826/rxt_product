@@ -1,10 +1,15 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { getMyFinancesAPI } from '../../api/finance'
 import { getMyQuestionsAPI } from '../../api/question'
 import { getKnowledgeListAPI } from '../../api/knowledge'
+import { useUserStore } from '../../stores/user'
+import ProfileCard from '../../components/ProfileCard.vue'
 
+const userStore = useUserStore()
 const stats = ref({ pendingFinance: 0, myQuestions: 0, knowledgeCount: 0 })
+
+const userName = computed(() => userStore.userInfo.userName || '')
 
 onMounted(async () => {
   try {
@@ -29,6 +34,8 @@ onMounted(async () => {
 <template>
   <div>
     <h2 class="page-title">工作台</h2>
+
+    <ProfileCard v-if="userName" :user-name="userName" />
 
     <div class="stats-grid">
       <div class="stat-card">

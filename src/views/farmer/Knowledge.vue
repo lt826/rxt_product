@@ -5,6 +5,8 @@ import { getKnowledgeListAPI } from '../../api/knowledge'
 
 const articles = ref([])
 const loading = ref(false)
+const dialogVisible = ref(false)
+const currentArticle = ref(null)
 
 onMounted(async () => {
   loading.value = true
@@ -28,7 +30,8 @@ onMounted(async () => {
 })
 
 function openArticle(a) {
-  ElMessage.info('打开文章：' + a.title)
+  currentArticle.value = a
+  dialogVisible.value = true
 }
 </script>
 
@@ -51,6 +54,17 @@ function openArticle(a) {
       </div>
     </div>
     <el-empty v-if="!loading && articles.length === 0" description="暂无知识文章" />
+
+    <!-- 文章详情弹窗 -->
+    <el-dialog v-model="dialogVisible" :title="currentArticle?.title" width="700px" class="article-dialog">
+      <div v-if="currentArticle" class="article-content">
+        <div class="article-meta">
+          <span>发布者：{{ currentArticle.author }}</span>
+          <span>发布时间：{{ currentArticle.date }}</span>
+        </div>
+        <div class="article-body" v-html="currentArticle.content.replace(/\n/g, '<br>')"></div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -116,5 +130,21 @@ function openArticle(a) {
   margin-top: 12px;
   font-size: 13px;
   color: #999;
+}
+
+.article-dialog .article-meta {
+  display: flex;
+  gap: 20px;
+  color: #909399;
+  font-size: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ebeef5;
+}
+.article-dialog .article-body {
+  line-height: 1.8;
+  color: #303133;
+  white-space: pre-wrap;
+  font-size: 15px;
 }
 </style>

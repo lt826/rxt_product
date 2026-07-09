@@ -1,20 +1,28 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getUsersAPI, getUserDetailAPI, createUserAPI, updateUserAPI, deleteUserAPI } from '../../api/admin'
+import { getUsersAPI, getUserDetailAPI, createUserAPI, updateUserAPI, deleteUserAPI, getPendingUsersAPI, approveUserAPI } from '../../api/admin'
 
 const users = ref([])
 const loading = ref(false)
+const activeTab = ref('all') // all | pending
 
 const searchForm = ref({ keyword: '', role: '', status: '' })
 const dialogVisible = ref(false)
 const editingUser = ref({ userName: '', nickName: '', phone: '', role: '', realName: '' })
 const isEdit = ref(false)
 
+// 待审批用户列表
+const pendingUsers = ref([])
+const pendingLoading = ref(false)
+
 // 用户详情抽屉
 const detailVisible = ref(false)
 const detailUser = ref(null)
 const detailLoading = ref(false)
+
+// 待审批数量
+const pendingCount = computed(() => pendingUsers.value.length)
 
 async function loadUsers() {
   loading.value = true
@@ -27,7 +35,8 @@ async function loadUsers() {
         role: u.role,
         phone: u.phone || '-',
         realName: u.realName || '-',
-        status: '正常',
+        status: u.status || 'approved',
+        statusText: getStatusText(u.status),
         regDate: u.createTime ? u.createTime.substring(0, 10) : '-',
         _raw: u
       }))
@@ -37,6 +46,47 @@ async function loadUsers() {
   } finally {
     loading.value = false
   }
+}
+
+async function loadPendingUsers() {
+  pendingLoading.value = true
+  try {
+    const res = await getPendingUsersAPI()
+    if (res.code === 200) {
+      pendingUsers.value = (res.data || []).map(u => ({
+        userName: u.userName,
+        name: u.nickName || u.userName,
+        role: u.role,
+        phone: u.phone || '-',
+        realName: u.realName || '-',
+        regDate: u.createTime ? u.createTime.substring(0, 10) : '-',
+        _raw: u
+      }))
+    }
+  } catch (e) {
+    ElMessage.error('获取待审批用户失败')
+  } finally {
+    pendingLoading.value = false
+  }
+}
+
+function getStatusText(status) {
+  const map = {
+    'pending': '待审批',
+    'approved': '已通过',
+    'rejected': '已拒绝',
+    '正常': '已通过'
+  }
+  return map[status] || status
+}
+
+function getStatusType(status) {
+  const map = {
+    'pending': 'warning',
+    'approved': 'success',
+    'rejected': 'danger'
+  }
+  return map[status] || 'info'
 }
 
 async function showDetail(row) {
@@ -95,6 +145,7 @@ async function saveUser() {
     }
     dialogVisible.value = false
     await loadUsers()
+    await loadPendingUsers()
   } catch (e) {
     // 已在拦截器中处理
   }
@@ -102,7 +153,7 @@ async function saveUser() {
 
 async function deleteUser(row) {
   try {
-    await ElMessageBox.confirm(`确定禁用用户 ${row.name} 吗？`, '提示', { type: 'warning' })
+    await ElMessageBox.confirm(`确定删除用户 ${row.name} 吗？`, '提示', { type: 'warning' })
     const res = await deleteUserAPI(row.userName)
     if (res.code === 200) {
       ElMessage.success('操作成功')
@@ -113,7 +164,36 @@ async function deleteUser(row) {
   }
 }
 
-onMounted(loadUsers)
+// 审批用户
+async function handleApprove(row, approved) {
+  try {
+    const action = approved ? '通过' : '拒绝'
+    await ElMessageBox.confirm(
+      `确定${action}用户 ${row.name} 的申请吗？`,
+      '审批确认',
+      { type: approved ? 'success' : 'warning' }
+    )
+    const res = await approveUserAPI(row.userName, approved)
+    if (res.code === 200) {
+      ElMessage.success(`已${action}该用户申请`)
+      await loadPendingUsers()
+      await loadUsers()
+    }
+  } catch (e) {
+    // 取消或失败
+  }
+}
+
+function handleTabChange() {
+  if (activeTab.value === 'pending') {
+    loadPendingUsers()
+  }
+}
+
+onMounted(() => {
+  loadUsers()
+  loadPendingUsers()
+})
 </script>
 
 <template>
@@ -122,26 +202,59 @@ onMounted(loadUsers)
     <el-card>
       <template #header>
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <span>用户列表</span>
+          <el-tabs v-model="activeTab" @tab-change="handleTabChange">
+            <el-tab-pane :label="`所有用户`" name="all" />
+            <el-tab-pane :label="`待审批 (${pendingCount})`" name="pending" />
+          </el-tabs>
           <el-button type="primary" size="small" @click="openCreate">新增用户</el-button>
         </div>
       </template>
-      <el-table :data="users" v-loading="loading" border stripe @row-click="showDetail">
-        <el-table-column prop="userName" label="用户名" />
-        <el-table-column prop="name" label="昵称" />
-        <el-table-column prop="realName" label="真实姓名" />
-        <el-table-column label="角色">
-          <template #default="{row}"><el-tag>{{ row.role }}</el-tag></template>
-        </el-table-column>
-        <el-table-column prop="phone" label="手机号" />
-        <el-table-column prop="regDate" label="注册时间" width="120" />
-        <el-table-column label="操作" width="150" @click.stop>
-          <template #default="{row}">
-            <el-button size="small" type="primary" link @click.stop="openEdit(row)">编辑</el-button>
-            <el-button size="small" type="danger" link @click.stop="deleteUser(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+
+      <!-- 待审批用户列表 -->
+      <div v-if="activeTab === 'pending'">
+        <el-table :data="pendingUsers" v-loading="pendingLoading" border stripe>
+          <el-table-column prop="userName" label="用户名" width="150" />
+          <el-table-column prop="name" label="昵称" />
+          <el-table-column prop="realName" label="真实姓名" />
+          <el-table-column label="角色" width="120">
+            <template #default="{row}"><el-tag>{{ row.role }}</el-tag></template>
+          </el-table-column>
+          <el-table-column prop="phone" label="手机号" width="130" />
+          <el-table-column prop="regDate" label="注册时间" width="120" />
+          <el-table-column label="操作" width="180" fixed="right">
+            <template #default="{row}">
+              <el-button size="small" type="success" @click="handleApprove(row, true)">通过</el-button>
+              <el-button size="small" type="danger" @click="handleApprove(row, false)">拒绝</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-empty v-if="!pendingLoading && pendingUsers.length === 0" description="暂无待审批用户" />
+      </div>
+
+      <!-- 所有用户列表 -->
+      <div v-else>
+        <el-table :data="users" v-loading="loading" border stripe @row-click="showDetail">
+          <el-table-column prop="userName" label="用户名" />
+          <el-table-column prop="name" label="昵称" />
+          <el-table-column prop="realName" label="真实姓名" />
+          <el-table-column label="角色">
+            <template #default="{row}"><el-tag>{{ row.role }}</el-tag></template>
+          </el-table-column>
+          <el-table-column label="状态" width="100">
+            <template #default="{row}">
+              <el-tag :type="getStatusType(row.status)">{{ row.statusText }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="phone" label="手机号" />
+          <el-table-column prop="regDate" label="注册时间" width="120" />
+          <el-table-column label="操作" width="150" @click.stop>
+            <template #default="{row}">
+              <el-button size="small" type="primary" link @click.stop="openEdit(row)">编辑</el-button>
+              <el-button size="small" type="danger" link @click.stop="deleteUser(row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
     </el-card>
 
     <!-- 用户详情抽屉 -->
@@ -153,6 +266,9 @@ onMounted(loadUsers)
           <el-descriptions-item label="真实姓名">{{ detailUser.realName || '-' }}</el-descriptions-item>
           <el-descriptions-item label="手机号">{{ detailUser.phone || '-' }}</el-descriptions-item>
           <el-descriptions-item label="角色">{{ detailUser.role }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="getStatusType(detailUser.status)">{{ getStatusText(detailUser.status) }}</el-tag>
+          </el-descriptions-item>
           <el-descriptions-item label="积分">{{ detailUser.integral ?? '-' }}</el-descriptions-item>
           <el-descriptions-item label="信用分">{{ detailUser.credit ?? '-' }}</el-descriptions-item>
           <el-descriptions-item label="身份证号">{{ detailUser.identityNum || '-' }}</el-descriptions-item>

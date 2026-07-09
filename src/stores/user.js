@@ -5,7 +5,9 @@ import { ElMessage } from 'element-plus'
 
 export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('rxt_token') || null)
-  const userInfo = ref(JSON.parse(localStorage.getItem('rxt_user') || 'null'))
+  // 从 localStorage 恢复时，确保 userName 存在（如果后端返回数据中没有，则尝试从 nickName 获取）
+  const storedUser = JSON.parse(localStorage.getItem('rxt_user') || 'null')
+  const userInfo = ref(storedUser)
 
   const isLoggedIn = computed(() => !!token.value)
   const role = computed(() => userInfo.value?.role || null)
@@ -24,6 +26,8 @@ export const useUserStore = defineStore('user', () => {
       if (data.role) {
         data.role = String(data.role).toLowerCase()
       }
+      // 添加 userName 到返回数据中
+      data.userName = credentials.username
       token.value = data.token
       userInfo.value = data
       localStorage.setItem('rxt_token', data.token)

@@ -43,3 +43,20 @@ export function getStatsOverviewAPI() {
     method: 'get'
   })
 }
+
+// 获取待审批用户列表
+export function getPendingUsersAPI() {
+  return request({
+    url: '/api/v1/admin/users/pending',
+    method: 'get'
+  })
+}
+
+// 审批用户
+export function approveUserAPI(userName, approved) {
+  return request({
+    url: `/api/v1/admin/users/${userName}/approve`,
+    method: 'post',
+    params: { approved }
+  })
+}

@@ -1,6 +1,11 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { getStatsOverviewAPI } from '../../api/admin'
+import { useUserStore } from '../../stores/user'
+import ProfileCard from '../../components/ProfileCard.vue'
+
+const userStore = useUserStore()
+const userName = computed(() => userStore.userInfo?.userName || '')
 
 const stats = ref([
   { label: '注册用户', value: '-', color: '#409eff' },
@@ -57,6 +62,9 @@ onMounted(async () => {
 <template>
   <div>
     <h2 class="page-title">系统管理</h2>
+
+    <ProfileCard v-if="userName" :user-name="userName" />
+
     <div class="stats-grid">
       <div v-for="s in stats" :key="s.label" class="stat-card">
         <div class="stat-value" :style="{ color: s.color }">{{ s.value }}</div>

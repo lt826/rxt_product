@@ -1,6 +1,9 @@
 <template>
   <div>
     <h2 class="page-title">买家工作台</h2>
+
+    <ProfileCard v-if="userName" :user-name="userName" />
+
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-value" style="color:#409eff">12</div><div class="stat-label">在售商品</div></div>
       <div class="stat-card"><div class="stat-value" style="color:#67c23a">5</div><div class="stat-label">收购需求</div></div>
@@ -11,6 +14,13 @@
   </div>
 </template>
 <script setup>
+import { computed } from 'vue'
+import { useUserStore } from '../../stores/user'
+import ProfileCard from '../../components/ProfileCard.vue'
+
+const userStore = useUserStore()
+const userName = computed(() => userStore.userInfo?.userName || '')
+
 const matches = [
   { product: '有机大米', amount: '500kg', farmer: '张大爷', status: '已匹配' },
   { product: '新鲜蔬菜', amount: '200kg', farmer: '李叔', status: '待确认' }

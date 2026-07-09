@@ -1,70 +1,101 @@
 <script setup>
-import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
-import { listReservesForExpert, handleReserve } from '../../api/reserve'
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getExpertAppointmentsAPI, handleAppointmentAPI, completeAppointmentAPI } from '../../api/appointment'
+import { useUserStore } from '../../stores/user'
 
+const userStore = useUserStore()
 const loading = ref(false)
-const list = ref([])
+const appointments = ref([])
 const activeFilter = ref('pending')
-const detail = ref(null)
-const detailVisible = ref(false)
 
-const handleForm = ref({ id: null, answer: '' })
+// 处理弹窗
 const handleVisible = ref(false)
+const handleForm = ref({
+  id: null,
+  reply: ''
+})
 const submitting = ref(false)
 
-async function loadList() {
+// 状态映射
+const statusMap = {
+  'pending': { text: '申请中', type: 'warning' },
+  'approved': { text: '已同意', type: 'success' },
+  'rejected': { text: '已拒绝', type: 'danger' },
+  'completed': { text: '已完成', type: 'info' },
+  'cancelled': { text: '已取消', type: 'info' }
+}
+
+function getStatusText(status) {
+  return statusMap[status]?.text || status
+}
+
+function getStatusType(status) {
+  return statusMap[status]?.type || 'info'
+}
+
+async function loadAppointments() {
   loading.value = true
   try {
-    const res = await listReservesForExpert()
-    list.value = res.data || []
+    const res = await getExpertAppointmentsAPI(userStore.userInfo.userName)
+    if (res.code === 200) {
+      appointments.value = res.data || []
+    }
+  } catch (e) {
+    // 忽略
   } finally {
     loading.value = false
   }
 }
 
-const filtered = computed(() =>
-  list.value.filter((r) => {
-    if (activeFilter.value === 'pending') return r.status === 0
-    if (activeFilter.value === 'accepted') return r.status === 1
-    if (activeFilter.value === 'rejected') return r.status === 2
-    return true
-  })
-)
+const filtered = computed(() => {
+  if (activeFilter.value === 'all') return appointments.value
+  return appointments.value.filter(a => a.status === activeFilter.value)
+})
 
-function statusInfo(s) {
-  if (s === 1) return { text: '已接受', type: 'success' }
-  if (s === 2) return { text: '已拒绝', type: 'info' }
-  return { text: '待处理', type: 'warning' }
-}
-
-function openDetail(row) {
-  detail.value = row
-  detailVisible.value = true
-}
-
-function openHandle(row) {
-  handleForm.value = { id: row.id, answer: row.answer || '' }
-  detailVisible.value = false
+function openHandleDialog(appointment) {
+  handleForm.value = {
+    id: appointment.id,
+    reply: ''
+  }
   handleVisible.value = true
 }
 
-async function submitHandle(status) {
-  if (!handleForm.value.answer && status === 1) {
-    handleForm.value.answer = '已接受，请保持电话畅通，近期上门实地指导。'
-  }
+async function handleReply(approved) {
   submitting.value = true
   try {
-    await handleReserve({ id: handleForm.value.id, answer: handleForm.value.answer, status })
-    ElMessage.success(status === 1 ? '已接受预约' : '已拒绝预约')
-    handleVisible.value = false
-    loadList()
+    const res = await handleAppointmentAPI(
+      handleForm.value.id,
+      userStore.userInfo.userName,
+      approved,
+      handleForm.value.reply
+    )
+    if (res.code === 200) {
+      ElMessage.success(approved ? '已同意预约' : '已拒绝预约')
+      handleVisible.value = false
+      await loadAppointments()
+    }
+  } catch (e) {
+    // 已在拦截器中处理
   } finally {
     submitting.value = false
   }
 }
 
-loadList()
+async function completeAppointment(appointment) {
+  try {
+    await ElMessageBox.confirm('确定完成该预约吗？', '提示', { type: 'success' })
+    const res = await completeAppointmentAPI(appointment.id, userStore.userInfo.userName)
+    if (res.code === 200) {
+      ElMessage.success('预约已完成')
+      await loadAppointments()
+    }
+  } catch (e) {
+    // 取消或失败
+  }
+}
+
+onMounted(loadAppointments)
 </script>
 
 <template>
@@ -73,85 +104,66 @@ loadList()
 
     <el-radio-group v-model="activeFilter" style="margin-bottom: 16px">
       <el-radio-button label="pending">待处理</el-radio-button>
-      <el-radio-button label="accepted">已接受</el-radio-button>
-      <el-radio-button label="rejected">已拒绝</el-radio-button>
+      <el-radio-button label="approved">已同意</el-radio-button>
+      <el-radio-button label="completed">已完成</el-radio-button>
       <el-radio-button label="all">全部</el-radio-button>
     </el-radio-group>
 
     <el-card v-loading="loading">
       <template #header><span>预约请求</span></template>
-      <el-empty v-if="!filtered.length" description="暂无预约" />
+      <el-empty v-if="!loading && filtered.length === 0" description="暂无预约" />
 
-      <div v-for="r in filtered" :key="r.id" class="apt-card">
-        <div class="apt-main" @click="openDetail(r)">
+      <div v-for="apt in filtered" :key="apt.id" class="apt-card">
+        <div class="apt-main">
           <div class="apt-farmer">
-            <el-icon><User /></el-icon>{{ r.questioner }}
-            <span class="apt-phone" v-if="r.phone">· {{ r.phone }}</span>
+            <el-icon><User /></el-icon>
+            {{ apt.farmerName }}
           </div>
-          <div class="apt-line">
-            <el-tag size="small" type="info">{{ r.plantName }}</el-tag>
-            <span class="apt-area">面积：{{ r.area }}</span>
-          </div>
-          <div class="apt-line muted">{{ r.address }}</div>
-          <div class="apt-line muted" v-if="r.message">留言：{{ r.message }}</div>
+          <div class="apt-line">📍 {{ apt.address }}</div>
+          <div class="apt-line">🕐 {{ apt.appointmentTime ? apt.appointmentTime.replace('T', ' ') : '-' }}</div>
+          <div v-if="apt.description" class="apt-line muted">📝 说明：{{ apt.description }}</div>
         </div>
         <div class="apt-side">
-          <el-tag :type="statusInfo(r.status).type">{{ statusInfo(r.status).text }}</el-tag>
-          <div v-if="r.status === 0" class="apt-actions">
-            <el-button size="small" type="primary" @click.stop="openHandle(r)">处理</el-button>
+          <el-tag :type="getStatusType(apt.status)">{{ getStatusText(apt.status) }}</el-tag>
+          <div v-if="apt.status === 'pending'" class="apt-actions">
+            <el-button size="small" type="primary" @click="openHandleDialog(apt)">处理</el-button>
           </div>
-          <div v-else-if="r.answer" class="apt-answer">回复：{{ r.answer }}</div>
+          <div v-else-if="apt.status === 'approved'" class="apt-actions">
+            <el-button size="small" type="success" @click="completeAppointment(apt)">完成</el-button>
+          </div>
         </div>
       </div>
     </el-card>
 
-    <el-drawer v-model="detailVisible" title="预约详情" size="460px">
-      <template v-if="detail">
-        <el-descriptions :column="1" border>
-          <el-descriptions-item label="农户">{{ detail.questioner }}</el-descriptions-item>
-          <el-descriptions-item label="电话">{{ detail.phone || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="作物">{{ detail.plantName }}</el-descriptions-item>
-          <el-descriptions-item label="面积">{{ detail.area }}</el-descriptions-item>
-          <el-descriptions-item label="土地地址">{{ detail.address }}</el-descriptions-item>
-          <el-descriptions-item label="土壤条件">{{ detail.soilCondition }}</el-descriptions-item>
-          <el-descriptions-item label="作物条件">{{ detail.plantCondition }}</el-descriptions-item>
-          <el-descriptions-item label="作物详情">{{ detail.plantDetail }}</el-descriptions-item>
-          <el-descriptions-item label="留言">{{ detail.message || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="statusInfo(detail.status).type">{{ statusInfo(detail.status).text }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item v-if="detail.answer" label="专家回复">{{ detail.answer }}</el-descriptions-item>
-        </el-descriptions>
-        <el-button v-if="detail.status === 0" type="primary" style="margin-top: 16px" @click="openHandle(detail)">处理该预约</el-button>
-      </template>
-    </el-drawer>
-
-    <el-dialog v-model="handleVisible" title="处理预约" width="520px">
+    <!-- 处理预约弹窗 -->
+    <el-dialog v-model="handleVisible" title="处理预约" width="500px">
       <el-form label-width="80px">
-        <el-form-item label="回复意向">
-          <el-input v-model="handleForm.answer" type="textarea" :rows="4" placeholder="给农户的回复，例如上门时间、建议等" />
+        <el-form-item label="回复">
+          <el-input
+            v-model="handleForm.reply"
+            type="textarea"
+            :rows="4"
+            :placeholder="handleForm.reply || '请输入回复内容（拒绝时必填）'"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="handleVisible = false">取消</el-button>
-        <el-button type="danger" :loading="submitting" @click="submitHandle(2)">拒绝</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitHandle(1)">接受</el-button>
+        <el-button type="danger" :loading="submitting" @click="handleReply(false)">拒绝</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleReply(true)">同意</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.page-title { font-size: 20px; font-weight: 600; color: #222; margin: 0 0 20px; }
-.apt-card { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid #ebeef5; align-items: flex-start; }
-.apt-card:last-child { border: none; }
-.apt-main { flex: 1; cursor: pointer; }
-.apt-farmer { display: flex; align-items: center; gap: 6px; font-weight: 500; color: #303133; margin-bottom: 8px; }
-.apt-phone { color: #909399; font-weight: normal; }
-.apt-line { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; font-size: 14px; color: #606266; }
-.apt-area { color: #606266; font-size: 13px; }
-.muted { color: #909399; font-size: 13px; }
-.apt-side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex-shrink: 0; }
-.apt-actions { display: flex; gap: 8px; }
-.apt-answer { font-size: 12px; color: #909399; max-width: 160px; }
+.page-title { font-size: 20px; font-weight: 600; color: #222; margin: 0 0 20px }
+.apt-card { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid #ebeef5; align-items: flex-start }
+.apt-card:last-child { border: none }
+.apt-main { flex: 1 }
+.apt-farmer { display: flex; align-items: center; gap: 6px; font-weight: 500; color: #303133; margin-bottom: 8px }
+.apt-line { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; font-size: 14px; color: #606266 }
+.muted { color: #909399; font-size: 13px }
+.apt-side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex-shrink: 0 }
+.apt-actions { display: flex; gap: 8px }
 </style>

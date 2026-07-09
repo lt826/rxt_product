@@ -103,7 +103,7 @@ onMounted(async () => {
             <el-option
               v-for="ex in experts"
               :key="ex.userName"
-              :label="`${ex.realName}（${ex.profession || ''}）`"
+              :label="`${ex.realName || ex.userName}（${ex.profession || '农业技术'}）`"
               :value="ex.userName"
             />
           </el-select>
