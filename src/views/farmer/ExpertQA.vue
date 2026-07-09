@@ -9,22 +9,13 @@ const experts = ref([])
 const loading = ref(false)
 const submitting = ref(false)
 
-const form = ref({
-  expertName: '',
-  title: '',
-  question: '',
-  plantName: ''
-})
+const form = ref({ expertName: '', title: '', question: '', plantName: '' })
 
 async function loadExperts() {
   try {
     const res = await listExperts()
-    if (res.code === 200) {
-      experts.value = res.data || []
-    }
-  } catch (e) {
-    // 忽略，选择框显示空
-  }
+    if (res.code === 200) experts.value = res.data || []
+  } catch { /* ignore */ }
 }
 
 async function loadQuestions() {
@@ -33,71 +24,49 @@ async function loadQuestions() {
     const res = await getMyQuestionsAPI()
     if (res.code === 200) {
       questions.value = (res.data || []).map(q => ({
-        id: q.id,
-        title: q.title,
-        question: q.question,
-        answer: q.answer,
-        expert: q.expertName || '待分配',
-        expertRealName: '',
-        date: '-',
-        status: q.status
+        id: q.id, title: q.title, question: q.question, answer: q.answer,
+        expert: q.expertName || '待分配', expertRealName: '', date: '-', status: q.status
       }))
-      // 用专家列表补全真实姓名
       if (experts.value.length) {
         const expertMap = Object.fromEntries(experts.value.map(e => [e.userName, e.realName]))
-        questions.value.forEach(q => {
-          q.expertRealName = expertMap[q.expert] || q.expert
-        })
+        questions.value.forEach(q => { q.expertRealName = expertMap[q.expert] || q.expert })
       }
     }
-  } catch (e) {
-    // 忽略
-  } finally {
-    loading.value = false
-  }
+  } catch { /* ignore */ } finally { loading.value = false }
 }
 
 async function handleSubmit() {
-  if (!form.value.title || !form.value.question) {
-    ElMessage.warning('请填写问题标题和描述')
-    return
-  }
-  if (!form.value.expertName) {
-    ElMessage.warning('请选择要提问的专家')
-    return
-  }
+  if (!form.value.title || !form.value.question) return ElMessage.warning('请填写问题标题和描述')
+  if (!form.value.expertName) return ElMessage.warning('请选择要提问的专家')
   submitting.value = true
   try {
     const res = await askQuestionAPI({
-      title: form.value.title,
-      question: form.value.question,
-      expertName: form.value.expertName,
-      plantName: form.value.plantName || undefined
+      title: form.value.title, question: form.value.question,
+      expertName: form.value.expertName, plantName: form.value.plantName || undefined
     })
     if (res.code === 200) {
       ElMessage.success('提问成功，等待专家解答')
       form.value = { expertName: '', title: '', question: '', plantName: '' }
       await loadQuestions()
     }
-  } catch (e) {
-    // 已在拦截器中处理
-  } finally {
-    submitting.value = false
-  }
+  } catch { /* handled in interceptor */ } finally { submitting.value = false }
 }
 
-onMounted(async () => {
-  await loadExperts()
-  await loadQuestions()
-})
+onMounted(async () => { await loadExperts(); await loadQuestions() })
 </script>
 
 <template>
-  <div>
-    <h2 class="page-title">专家问答</h2>
-    <el-card style="margin-bottom:20px">
-      <template #header><span>向专家提问</span></template>
-      <el-form>
+  <div class="qa-page">
+    <div class="page-head">
+      <div>
+        <h2 class="page-title">专家问答</h2>
+        <p class="page-sub">向农业专家提问，获取专业指导</p>
+      </div>
+    </div>
+
+    <el-card shadow="never" class="ask-card">
+      <template #header><strong>向专家提问</strong></template>
+      <el-form label-width="90px">
         <el-form-item label="选择专家" required>
           <el-select v-model="form.expertName" placeholder="请选择要咨询的专家" style="width:100%">
             <el-option
@@ -118,13 +87,18 @@ onMounted(async () => {
           <el-input v-model="form.question" type="textarea" :rows="4" placeholder="详细描述您的问题" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="submitting" @click="handleSubmit">提交问题</el-button>
+          <el-button type="primary" :loading="submitting" size="large" class="submit-btn" @click="handleSubmit">提交问题</el-button>
         </el-form-item>
       </el-form>
     </el-card>
 
-    <el-card>
-      <template #header><span>我的提问</span></template>
+    <el-card shadow="never" style="margin-top:20px">
+      <template #header>
+        <div class="card-header-row">
+          <strong>我的提问</strong>
+          <el-button text size="small" @click="loadQuestions">刷新</el-button>
+        </div>
+      </template>
       <div v-for="q in questions" :key="q.id" class="qa-item">
         <div class="qa-question">{{ q.title }}</div>
         <div class="qa-meta">提问给：{{ q.expertRealName || q.expert }}</div>
@@ -137,10 +111,16 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.page-title { font-size: 20px; font-weight: 600; color: #222; margin: 0 0 20px; }
-.qa-item { padding: 16px 0; border-bottom: 1px solid #ebeef5; }
+.qa-page { max-width: 800px; }
+.page-head { margin-bottom: 24px; }
+.page-title { font-size: 24px; font-weight: 800; color: var(--green-deep); margin: 0 0 4px; }
+.page-sub { font-size: 14px; color: var(--text-muted); margin: 0; }
+.ask-card { border-radius: var(--radius-md); }
+.submit-btn { width: 100%; border-radius: var(--radius-sm); }
+.card-header-row { display: flex; justify-content: space-between; align-items: center; }
+.qa-item { padding: 16px 0; border-bottom: 1px solid var(--border); }
 .qa-item:last-child { border: none; }
-.qa-question { font-weight: 500; color: #303133; margin-bottom: 6px; }
-.qa-answer { color: #67c23a; font-size: 14px; margin-bottom: 6px; }
-.qa-meta { color: #909399; font-size: 13px; margin-top: 4px; }
+.qa-question { font-weight: 500; color: var(--text); margin-bottom: 6px; }
+.qa-answer { color: var(--green); font-size: 14px; margin-bottom: 6px; font-weight: 500; }
+.qa-meta { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
 </style>

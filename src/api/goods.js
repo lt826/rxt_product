@@ -1,22 +1,24 @@
 import request from './index'
 
-export function getGoodsListAPI() {
+export function getGoodsListAPI(params) {
   return request({
     url: '/api/v1/goods/list',
-    method: 'get'
+    method: 'get',
+    params
   })
 }
 
-export function getMyGoodsAPI() {
+export function getMyGoodsAPI(params) {
   return request({
     url: '/api/v1/goods/my',
-    method: 'get'
+    method: 'get',
+    params
   })
 }
 
 export function getGoodsDetailAPI(goodsId) {
   return request({
-    url: `/api/v1/goods/${goodsId}`,
+    url: `/api/v1/goods/detail/${goodsId}`,
     method: 'get'
   })
 }

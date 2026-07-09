@@ -9,7 +9,6 @@ const route = useRoute()
 const userStore = useUserStore()
 
 const loading = ref(false)
-const showPassword = ref(false)
 const formRef = ref(null)
 
 const form = reactive({
@@ -19,11 +18,11 @@ const form = reactive({
 })
 
 const roles = [
-  { value: 'farmer', label: '农户', icon: '👨‍🌾' },
-  { value: 'buyer', label: '买家', icon: '📦' },
-  { value: 'bank', label: '银行工作人员', icon: '🏦' },
-  { value: 'expert', label: '农业专家', icon: '👨‍🔬' },
-  { value: 'admin', label: '平台管理员', icon: '⚙️' }
+  { value: 'farmer', label: '农户', icon: '🌾' },
+  { value: 'buyer', label: '买家', icon: '🛒' },
+  { value: 'bank', label: '银行', icon: '🏦' },
+  { value: 'expert', label: '专家', icon: '👨‍🔬' },
+  { value: 'admin', label: '管理', icon: '⚙️' }
 ]
 
 const rules = {
@@ -39,7 +38,6 @@ async function handleLogin() {
   loading.value = true
   try {
     const data = await userStore.login(form)
-    // 优先用后端返回的角色，兜底用用户选择的角色
     const targetRole = data.role || form.role
     router.push(`/${targetRole}/dashboard`)
   } catch (e) {
@@ -52,67 +50,118 @@ async function handleLogin() {
 function goToRegister() {
   router.push('/register')
 }
+
+// Floating particles
+const particles = ref([])
+onMounted(() => {
+  particles.value = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    size: Math.random() * 6 + 2,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    duration: Math.random() * 20 + 15,
+    delay: Math.random() * 10
+  }))
+})
 </script>
 
 <template>
   <div class="login-page">
-    <div class="login-card">
-      <div class="login-header">
-        <div class="logo">🌾 融销通</div>
-        <h2>欢迎回来</h2>
-        <p>请选择角色并输入账号密码登录</p>
-      </div>
+    <!-- Animated background -->
+    <div class="bg-layer">
+      <div class="bg-gradient"></div>
+      <div class="bg-pattern"></div>
+      <div v-for="p in particles" :key="p.id" class="particle" :style="{
+        width: p.size + 'px',
+        height: p.size + 'px',
+        left: p.x + '%',
+        top: p.y + '%',
+        animationDuration: p.duration + 's',
+        animationDelay: p.delay + 's'
+      }"></div>
+    </div>
 
-      <el-form ref="formRef" :model="form" :rules="rules" class="login-form" @submit.prevent="handleLogin">
-        <!-- 角色选择 -->
-        <div class="role-selector">
-          <div
-            v-for="r in roles"
-            :key="r.value"
-            class="role-option"
-            :class="{ active: form.role === r.value }"
-            @click="form.role = r.value"
-          >
-            <span class="role-icon">{{ r.icon }}</span>
-            <span class="role-label">{{ r.label }}</span>
+    <div class="login-container">
+      <!-- Left: branding -->
+      <div class="login-branding">
+        <div class="brand-icon">🌾</div>
+        <h1>融销通</h1>
+        <p class="brand-sub">农产品融销一体平台</p>
+        <p class="brand-desc">融通资金 · 链接产销 · 智汇农业</p>
+        <div class="brand-stats">
+          <div class="stat-item">
+            <div class="stat-num">5000+</div>
+            <div class="stat-label">注册农户</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">200+</div>
+            <div class="stat-label">融资产品</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">50+</div>
+            <div class="stat-label">农业专家</div>
           </div>
         </div>
+      </div>
 
-        <el-form-item prop="username">
-          <el-input
-            v-model="form.username"
-            placeholder="请输入账号"
+      <!-- Right: form -->
+      <div class="login-form-panel">
+        <div class="form-header">
+          <h2>欢迎回来</h2>
+          <p>登录您的账号继续使用</p>
+        </div>
+
+        <el-form ref="formRef" :model="form" :rules="rules" class="login-form" @submit.prevent="handleLogin">
+          <!-- Role selector -->
+          <div class="role-selector">
+            <div
+              v-for="r in roles"
+              :key="r.value"
+              class="role-pill"
+              :class="{ active: form.role === r.value }"
+              @click="form.role = r.value"
+            >
+              <span class="pill-icon">{{ r.icon }}</span>
+              <span class="pill-label">{{ r.label }}</span>
+            </div>
+          </div>
+
+          <el-form-item prop="username">
+            <el-input
+              v-model="form.username"
+              placeholder="请输入账号"
+              size="large"
+              :prefix-icon="'User'"
+              clearable
+            />
+          </el-form-item>
+
+          <el-form-item prop="password">
+            <el-input
+              v-model="form.password"
+              type="password"
+              placeholder="请输入密码"
+              size="large"
+              :prefix-icon="'Lock'"
+              show-password
+            />
+          </el-form-item>
+
+          <el-button
+            type="primary"
             size="large"
-            :prefix-icon="'User'"
-            clearable
-          />
-        </el-form-item>
+            class="login-btn"
+            :loading="loading"
+            @click="handleLogin"
+          >
+            登 录
+          </el-button>
+        </el-form>
 
-        <el-form-item prop="password">
-          <el-input
-            v-model="form.password"
-            :type="showPassword ? 'text' : 'password'"
-            placeholder="请输入密码"
-            size="large"
-            :prefix-icon="'Lock'"
-            show-password
-          />
-        </el-form-item>
-
-        <el-button
-          type="primary"
-          size="large"
-          style="width:100%; margin-top: 4px;"
-          :loading="loading"
-          @click="handleLogin"
-        >
-          登 录
-        </el-button>
-      </el-form>
-
-      <div class="login-footer">
-        <span>还没有账号？</span>
-        <el-button text type="primary" @click="goToRegister">立即注册</el-button>
+        <div class="form-footer">
+          <span>还没有账号？</span>
+          <el-button text type="primary" @click="goToRegister" class="link-btn">立即注册</el-button>
+        </div>
       </div>
     </div>
   </div>
@@ -124,87 +173,253 @@ function goToRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-}
-.login-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 40px;
-  width: 420px;
-  max-width: 90%;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-}
-.login-header {
-  text-align: center;
-  margin-bottom: 28px;
-}
-.logo {
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  color: #764ba2;
-}
-.login-header h2 {
-  margin: 0 0 6px;
-  font-size: 22px;
-  color: #303133;
-}
-.login-header p {
-  margin: 0;
-  color: #909399;
-  font-size: 14px;
+  position: relative;
+  overflow: hidden;
+  background: var(--green-deep);
+  padding: 24px;
 }
 
-/* 角色选择器 - 网格布局 */
-.role-selector {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
-  margin-bottom: 20px;
+/* ===== Animated Background ===== */
+.bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
 }
-.role-option {
+.bg-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 35%, #409160 65%, #1b4332 100%);
+}
+.bg-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M40 0v80M0 40h80' stroke='%23ffffff' stroke-opacity='0.03' stroke-width='1'/%3E%3C/svg%3E");
+}
+.particle {
+  position: absolute;
+  background: rgba(255,255,255,0.08);
+  border-radius: 50%;
+  animation: float linear infinite;
+}
+@keyframes float {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+}
+
+/* ===== Container ===== */
+.login-container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  max-width: 1000px;
+  min-height: 580px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+}
+
+/* ===== Left Branding ===== */
+.login-branding {
+  flex: 1;
+  background: linear-gradient(160deg, rgba(27,67,50,0.95), rgba(45,106,79,0.85));
+  backdrop-filter: blur(20px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 48px 40px;
+  color: #fff;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.login-branding::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 40%, rgba(82,183,136,0.2), transparent 60%);
+}
+.brand-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  position: relative;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
+}
+.login-branding h1 {
+  font-size: 36px;
+  font-weight: 800;
+  margin: 0 0 8px;
+  letter-spacing: 0.1em;
+  position: relative;
+}
+.brand-sub {
+  font-size: 16px;
+  opacity: 0.9;
+  margin: 0 0 6px;
+  position: relative;
+}
+.brand-desc {
+  font-size: 13px;
+  opacity: 0.6;
+  letter-spacing: 0.15em;
+  margin: 0 0 40px;
+  position: relative;
+}
+.brand-stats {
+  display: flex;
+  gap: 32px;
+  position: relative;
+}
+.stat-item {
+  text-align: center;
+}
+.stat-num {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.stat-label {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: 4px;
+}
+
+/* ===== Right Form Panel ===== */
+.login-form-panel {
+  width: 420px;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  padding: 48px 40px;
+}
+.form-header {
+  margin-bottom: 32px;
+}
+.form-header h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--green-deep);
+  margin: 0 0 6px;
+}
+.form-header p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Role selector pills */
+.role-selector {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
+  background: var(--bg);
+  padding: 4px;
+  border-radius: var(--radius-md);
+}
+.role-pill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: 10px 4px;
-  border-radius: 8px;
-  border: 2px solid #e4e7ed;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s;
-  background: #fafafa;
+  border: 2px solid transparent;
 }
-.role-option:hover {
-  border-color: #764ba2;
-  background: #f3eeff;
+.role-pill:hover {
+  background: var(--green-mist);
 }
-.role-option.active {
-  border-color: #764ba2;
-  background: #f3eeff;
-  box-shadow: 0 0 0 1px #764ba2;
+.role-pill.active {
+  background: var(--green-mist);
+  border-color: var(--green);
+  box-shadow: 0 2px 8px rgba(45,106,79,0.15);
 }
-.role-icon {
+.pill-icon {
   font-size: 20px;
-  line-height: 1.3;
+  line-height: 1;
 }
-.role-label {
+.pill-label {
   font-size: 11px;
-  color: #606266;
+  color: var(--text-secondary);
   margin-top: 4px;
-  white-space: nowrap;
+  font-weight: 500;
 }
-.role-option.active .role-label {
-  color: #764ba2;
+.role-pill.active .pill-label {
+  color: var(--green);
+  font-weight: 700;
+}
+
+/* Form */
+.login-form .el-form-item {
+  margin-bottom: 18px;
+}
+.login-form .el-input__wrapper {
+  border-radius: var(--radius-sm);
+  padding: 4px 12px;
+}
+.login-btn {
+  width: 100%;
+  height: 48px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  margin-top: 8px;
+  border-radius: var(--radius-sm);
+}
+
+/* Footer */
+.form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: auto;
+  padding-top: 24px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.link-btn {
   font-weight: 600;
 }
 
-.login-form .el-form-item {
-  margin-bottom: 16px;
+/* Responsive */
+@media (max-width: 900px) {
+  .login-container {
+    flex-direction: column;
+    max-width: 460px;
+  }
+  .login-branding {
+    padding: 32px 24px;
+    min-height: 200px;
+  }
+  .brand-stats {
+    gap: 24px;
+  }
+  .stat-num {
+    font-size: 22px;
+  }
+  .login-form-panel {
+    width: 100%;
+    padding: 32px 24px;
+  }
 }
-.login-footer {
-  text-align: center;
-  margin-top: 18px;
-  color: #909399;
-  font-size: 14px;
+@media (max-width: 500px) {
+  .login-container {
+    border-radius: var(--radius-lg);
+    min-height: auto;
+  }
+  .login-branding h1 {
+    font-size: 28px;
+  }
+  .login-form-panel {
+    padding: 24px 20px;
+  }
 }
 </style>

@@ -17,3 +17,11 @@ export function updateUserInfoAPI(data) {
     data
   })
 }
+
+// 获取所有农户列表（买家端用）
+export function getFarmersAPI() {
+  return request({
+    url: '/api/v1/farmers',
+    method: 'get'
+  })
+}

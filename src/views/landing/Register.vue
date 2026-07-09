@@ -23,14 +23,13 @@ const form = reactive({
 })
 
 const roles = [
-  { value: 'farmer', label: '农户' },
-  { value: 'buyer', label: '买家' },
-  { value: 'bank', label: '银行工作人员' },
-  { value: 'expert', label: '农业专家' },
-  { value: 'admin', label: '平台管理员' }
+  { value: 'farmer', label: '农户', icon: '🌾' },
+  { value: 'buyer', label: '买家', icon: '🛒' },
+  { value: 'bank', label: '银行工作人员', icon: '🏦' },
+  { value: 'expert', label: '农业专家', icon: '👨‍🔬' },
+  { value: 'admin', label: '平台管理员', icon: '⚙️' }
 ]
 
-// 判断是否需要审批
 const needsApproval = computed(() => {
   return ['bank', 'expert', 'admin'].includes(form.role)
 })
@@ -95,83 +94,143 @@ async function handleRegister() {
 
 <template>
   <div class="register-page">
-    <div class="register-card">
-      <div class="register-header">
-        <div class="logo">🌾 融销通</div>
-        <h2>创建账号</h2>
-        <p>注册后即可使用各模块功能</p>
+    <div class="bg-layer">
+      <div class="bg-gradient"></div>
+      <div class="bg-pattern"></div>
+    </div>
+
+    <div class="register-container">
+      <!-- Left: info -->
+      <div class="register-info">
+        <div class="info-icon">🌱</div>
+        <h2>加入融销通</h2>
+        <p class="info-desc">开启你的智慧农业之旅</p>
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="feature-icon">💰</span>
+            <div>
+              <strong>融资服务</strong>
+              <span>对接多家银行，快速获取资金支持</span>
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">📦</span>
+            <div>
+              <strong>电商平台</strong>
+              <span>一键上架，直达全国买家</span>
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">👨‍🔬</span>
+            <div>
+              <strong>专家咨询</strong>
+              <span>农业专家在线解答种植难题</span>
+            </div>
+          </div>
+          <div class="feature-item">
+            <span class="feature-icon">📚</span>
+            <div>
+              <strong>知识库</strong>
+              <span>海量农业技术文章随时学习</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="register-form">
-        <div class="form-section-title">账号信息</div>
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="账号" prop="userName">
-              <el-input v-model="form.userName" placeholder="请输入登录账号" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="昵称" prop="nickName">
-              <el-input v-model="form.nickName" placeholder="请输入昵称" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="密码" prop="password">
-              <el-input v-model="form.password" type="password" placeholder="至少6位密码" show-password />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="确认密码" prop="confirmPassword">
-              <el-input v-model="form.confirmPassword" type="password" placeholder="再次输入密码" show-password />
-            </el-form-item>
-          </el-col>
-        </el-row>
+      <!-- Right: form -->
+      <div class="register-form-panel">
+        <div class="form-header">
+          <div class="back-link" @click="router.push('/login')">← 返回登录</div>
+          <h2>创建账号</h2>
+          <p>填写以下信息完成注册</p>
+        </div>
 
-        <div class="form-section-title">基本信息</div>
-        <el-row :gutter="16">
-          <el-col :span="12">
-            <el-form-item label="真实姓名">
-              <el-input v-model="form.realName" placeholder="选填" />
+        <el-form ref="formRef" :model="form" :rules="rules" label-position="top" class="register-form">
+          <!-- Role selection -->
+          <div class="form-section">
+            <label class="section-label">选择角色</label>
+            <div class="role-grid">
+              <div
+                v-for="r in roles"
+                :key="r.value"
+                class="role-card"
+                :class="{ active: form.role === r.value }"
+                @click="form.role = r.value"
+              >
+                <span class="role-emoji">{{ r.icon }}</span>
+                <span class="role-name">{{ r.label }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Account info -->
+          <div class="form-section">
+            <label class="section-label">账号信息</label>
+            <el-row :gutter="12">
+              <el-col :span="12">
+                <el-form-item label="账号" prop="userName">
+                  <el-input v-model="form.userName" placeholder="登录账号" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="昵称" prop="nickName">
+                  <el-input v-model="form.nickName" placeholder="显示名称" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="12">
+              <el-col :span="12">
+                <el-form-item label="密码" prop="password">
+                  <el-input v-model="form.password" type="password" placeholder="至少6位" show-password />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="确认密码" prop="confirmPassword">
+                  <el-input v-model="form.confirmPassword" type="password" placeholder="再次输入" show-password />
+                </el-form-item>
+              </el-col>
+            </el-row>
+          </div>
+
+          <!-- Basic info -->
+          <div class="form-section">
+            <label class="section-label">基本信息 <span class="optional">(选填)</span></label>
+            <el-row :gutter="12">
+              <el-col :span="12">
+                <el-form-item label="真实姓名">
+                  <el-input v-model="form.realName" placeholder="用于身份认证" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="手机号" prop="phone">
+                  <el-input v-model="form.phone" placeholder="用于接收通知" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-form-item label="身份证号">
+              <el-input v-model="form.identityNum" placeholder="融资服务需要" />
             </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="手机号" prop="phone">
-              <el-input v-model="form.phone" placeholder="请输入手机号" />
+            <el-form-item label="地址">
+              <el-input v-model="form.address" placeholder="所在地区" />
             </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item label="身份证号">
-          <el-input v-model="form.identityNum" placeholder="选填" />
-        </el-form-item>
-        <el-form-item label="地址">
-          <el-input v-model="form.address" placeholder="选填" />
-        </el-form-item>
+          </div>
 
-        <div class="form-section-title">角色选择</div>
-        <el-form-item label="选择角色">
-          <el-select v-model="form.role" style="width:100%">
-            <el-option v-for="r in roles" :key="r.value" :label="r.label" :value="r.value" />
-          </el-select>
-        </el-form-item>
+          <!-- Approval alert -->
+          <el-alert v-if="needsApproval" type="warning" :closable="false" show-icon class="approval-alert">
+            <template #title>
+              <strong>需要审批</strong> — 该角色注册后需等待管理员审批才能登录
+            </template>
+          </el-alert>
 
-        <!-- 审批提示 -->
-        <el-alert v-if="needsApproval" type="warning" :closable="false" show-icon style="margin-bottom: 16px;">
-          <template #title>
-            ⚠️ 该角色需要管理员审批
-          </template>
-          <p style="margin: 4px 0 0;">注册后需等待管理员审批才能登录，请留意登录页面的状态提示。</p>
-        </el-alert>
-
-        <el-button type="primary" style="width:100%; margin-top: 8px;" :loading="loading" @click="handleRegister">
-          注 册
-        </el-button>
-      </el-form>
-
-      <div class="register-footer">
-        <span>已有账号？</span>
-        <el-button text type="primary" @click="router.push('/login')">立即登录</el-button>
+          <el-button
+            type="primary"
+            class="register-btn"
+            :loading="loading"
+            @click="handleRegister"
+          >
+            完 成 注 册
+          </el-button>
+        </el-form>
       </div>
     </div>
   </div>
@@ -183,55 +242,239 @@ async function handleRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  padding: 40px 16px;
+  position: relative;
+  overflow-y: auto;
+  padding: 40px 24px;
+  background: var(--green-deep);
 }
-.register-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 40px;
-  width: 560px;
-  max-width: 100%;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+
+.bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
 }
-.register-header {
+.bg-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #1b4332 100%);
+}
+.bg-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.register-container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  max-width: 1100px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+  min-height: 640px;
+}
+
+/* ===== Left Info Panel ===== */
+.register-info {
+  flex: 1;
+  background: linear-gradient(160deg, rgba(27,67,50,0.95), rgba(45,106,79,0.85));
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 40px;
+  color: #fff;
   text-align: center;
-  margin-bottom: 32px;
 }
-.logo {
+.info-icon {
+  font-size: 56px;
+  margin-bottom: 20px;
+}
+.register-info h2 {
   font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 16px;
-  color: #764ba2;
-}
-.register-header h2 {
+  font-weight: 800;
   margin: 0 0 8px;
-  font-size: 22px;
-  color: #303133;
 }
-.register-header p {
-  margin: 0;
-  color: #909399;
+.info-desc {
   font-size: 14px;
+  opacity: 0.7;
+  margin: 0 0 36px;
 }
-.form-section-title {
+.feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  text-align: left;
+  width: 100%;
+  max-width: 320px;
+}
+.feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.feature-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  background: rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.feature-item strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 2px;
+}
+.feature-item span:last-child {
+  font-size: 13px;
+  opacity: 0.7;
+  line-height: 1.4;
+}
+
+/* ===== Right Form Panel ===== */
+.register-form-panel {
+  width: 520px;
+  background: var(--surface);
+  padding: 40px 36px;
+  overflow-y: auto;
+}
+.form-header {
+  margin-bottom: 28px;
+}
+.back-link {
+  font-size: 13px;
+  color: var(--green);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+  transition: opacity 0.2s;
+}
+.back-link:hover { opacity: 0.7; }
+.form-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--green-deep);
+  margin: 0 0 4px;
+}
+.form-header p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Section labels */
+.form-section {
+  margin-bottom: 20px;
+}
+.section-label {
+  display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #606266;
-  margin: 20px 0 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #ebeef5;
+  color: var(--green);
+  margin-bottom: 12px;
 }
-.form-section-title:first-of-type {
-  margin-top: 0;
+.optional {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 12px;
 }
+
+/* Role grid */
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 4px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg);
+}
+.role-card:hover {
+  border-color: var(--green-pale);
+  background: var(--green-mist);
+}
+.role-card.active {
+  border-color: var(--green);
+  background: var(--green-mist);
+  box-shadow: 0 2px 8px rgba(45,106,79,0.12);
+}
+.role-emoji {
+  font-size: 24px;
+  line-height: 1;
+}
+.role-name {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  font-weight: 500;
+}
+.role-card.active .role-name {
+  color: var(--green);
+  font-weight: 700;
+}
+
+/* Form */
 .register-form .el-form-item {
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
-.register-footer {
-  text-align: center;
-  margin-top: 20px;
-  color: #909399;
-  font-size: 14px;
+.register-form .el-input__wrapper {
+  border-radius: var(--radius-sm);
+}
+
+.approval-alert {
+  margin-bottom: 16px;
+  border-radius: var(--radius-sm);
+}
+
+.register-btn {
+  width: 100%;
+  height: 48px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  border-radius: var(--radius-sm);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .register-container {
+    flex-direction: column;
+    max-width: 500px;
+  }
+  .register-info {
+    padding: 32px 24px;
+    min-height: 200px;
+  }
+  .register-form-panel {
+    width: 100%;
+    padding: 28px 24px;
+  }
+  .role-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+@media (max-width: 500px) {
+  .register-container {
+    border-radius: var(--radius-lg);
+  }
+  .role-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 </style>

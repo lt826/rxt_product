@@ -1,99 +1,378 @@
 <script setup>
-import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
-import request from '../../api/index'
+import { ref, onMounted } from 'vue'
+import { getGoodsListAPI, publishGoodsAPI, deleteGoodsAPI } from '../../api/goods'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Plus, Delete, Search } from '@element-plus/icons-vue'
 
+const products = ref([])
 const loading = ref(false)
-const keyword = ref('')
-const list = ref([])
+const dialogVisible = ref(false)
+const submitting = ref(false)
+const uploadingImage = ref(false)
 
-async function loadList() {
+const form = ref({
+  title: '', price: null, content: '', type: '', address: '', picture: ''
+})
+
+const imageFile = ref(null)
+const imagePreview = ref('')
+const imageUrlInput = ref('')
+
+onMounted(async () => { await loadProducts() })
+
+async function loadProducts() {
   loading.value = true
   try {
-    const res = await request({ url: '/api/v1/goods/list', params: { type: '1', keyword: keyword.value }, method: 'get' })
-    list.value = res.data || []
-  } finally { loading.value = false }
+    const res = await getGoodsListAPI()
+    if (res.code === 200) {
+      products.value = (res.data || []).map(g => ({
+        id: g.goodsId, title: g.title, price: g.price, content: g.content,
+        seller: g.ownName, type: g.type, address: g.address,
+        picture: g.picture, createTime: g.createTime
+      }))
+    }
+  } catch {
+    ElMessage.error('获取商品列表失败')
+  } finally {
+    loading.value = false
+  }
 }
 
-function purchase(row) {
-  ElMessage.success('已加入购物车：' + row.title + '，请前往结算')
+function handleImageChange(file) {
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+  if (!allowedTypes.includes(file.raw.type)) {
+    ElMessage.warning('只支持上传 JPG、PNG、GIF、WEBP 格式的图片')
+    return false
+  }
+  if (file.raw.size > 5 * 1024 * 1024) {
+    ElMessage.warning('图片大小不能超过 5MB')
+    return false
+  }
+  imageFile.value = file.raw
+  uploadingImage.value = true
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    imagePreview.value = e.target.result
+    form.value.picture = e.target.result
+    uploadingImage.value = false
+  }
+  reader.onerror = () => {
+    ElMessage.error('图片读取失败')
+    uploadingImage.value = false
+  }
+  reader.readAsDataURL(file.raw)
+  return false
 }
 
-loadList()
+function removeImage() {
+  imageFile.value = null
+  imagePreview.value = ''
+  form.value.picture = ''
+  imageUrlInput.value = ''
+}
+
+function useImageUrl() {
+  if (imageUrlInput.value.trim()) {
+    form.value.picture = imageUrlInput.value.trim()
+    imagePreview.value = imageUrlInput.value.trim()
+    ElMessage.success('图片链接已设置')
+  }
+}
+
+function openPublishDialog() {
+  dialogVisible.value = true
+  form.value = { title: '', price: null, content: '', type: '', address: '', picture: '' }
+  imageFile.value = null
+  imagePreview.value = ''
+  imageUrlInput.value = ''
+}
+
+async function submitPublish() {
+  if (!form.value.title?.trim()) return ElMessage.warning('请输入商品名称')
+  if (!form.value.price || parseFloat(form.value.price) <= 0) return ElMessage.warning('请输入有效的价格')
+  if (!form.value.content?.trim()) return ElMessage.warning('请输入商品描述')
+  if (!form.value.type?.trim()) return ElMessage.warning('请输入商品类型')
+  if (!form.value.address?.trim()) return ElMessage.warning('请输入产地地址')
+
+  submitting.value = true
+  try {
+    const contentWithCategory = '【商品类型：' + form.value.type.trim() + '】\n' + form.value.content.trim()
+    const res = await publishGoodsAPI({
+      title: form.value.title.trim(), price: parseFloat(form.value.price),
+      content: contentWithCategory, type: '1', address: form.value.address.trim(),
+      picture: form.value.picture || ''
+    })
+    if (res.code === 200) {
+      ElMessage.success('商品发布成功！')
+      dialogVisible.value = false
+      await loadProducts()
+    } else {
+      ElMessage.error(res.message || '发布失败')
+    }
+  } catch {
+    ElMessage.error('发布失败，请重试')
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function deleteProduct(item) {
+  try {
+    await ElMessageBox.confirm('确定要删除商品"' + item.title + '"吗？', '提示', {
+      type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消'
+    })
+    loading.value = true
+    const res = await deleteGoodsAPI(item.id)
+    if (res.code === 200) {
+      ElMessage.success('删除成功')
+      await loadProducts()
+    } else {
+      ElMessage.error(res.message || '删除失败')
+    }
+  } catch {
+    if (e !== 'cancel') ElMessage.error('删除失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+function viewDetail(item) {
+  ElMessage.info('查看详情：' + item.title)
+}
 </script>
 
 <template>
-  <div>
+  <div class="products-page">
     <div class="page-head">
-      <h2 class="page-title">商品采购</h2>
-      <div class="search-area">
-        <el-input v-model="keyword" placeholder="搜索商品名称" clearable style="width:280px" @keyup.enter="loadList" @clear="loadList">
-          <template #append><el-button @click="loadList">搜索</el-button></template>
-        </el-input>
+      <div>
+        <h2 class="page-title">商品货源</h2>
+        <p class="page-sub">管理你的商品，发布新的农产品</p>
       </div>
+      <el-button type="primary" @click="openPublishDialog" class="publish-btn">
+        <el-icon><Plus /></el-icon> 发布商品
+      </el-button>
     </div>
 
     <div v-loading="loading">
       <div class="goods-grid">
-        <div v-for="item in list" :key="item.goodsId" class="goods-card">
-          <div class="goods-img">{{ item.picture ? '🖼️' : '📦' }}</div>
+        <div v-for="item in products" :key="item.id" class="goods-card">
+          <div class="goods-img">
+            <img v-if="item.picture && item.picture.startsWith('http')" :src="item.picture" :alt="item.title" />
+            <span v-else>📦</span>
+          </div>
           <div class="goods-info">
             <div class="goods-title">{{ item.title }}</div>
-            <div class="goods-price">
+            <div class="goods-price-row">
               <span class="price">¥{{ item.price }}</span>
-              <span class="goods-seller">{{ item.ownName }}</span>
+              <span class="goods-seller">{{ item.seller }}</span>
             </div>
-            <div v-if="item.address" class="goods-extra">{{ item.address }}</div>
-            <el-button type="primary" size="small" style="width:100%;margin-top:8px" @click="purchase(item)">立即购买</el-button>
+            <div class="goods-tags">
+              <el-tag v-if="item.type" size="small" type="success" effect="plain">{{ item.type }}</el-tag>
+              <el-tag v-if="item.address" size="small" type="info" effect="plain">{{ item.address }}</el-tag>
+            </div>
+            <div class="goods-actions">
+              <el-button size="small" type="primary" plain @click="viewDetail(item)">查看</el-button>
+              <el-button size="small" type="danger" plain @click="deleteProduct(item)">删除</el-button>
+            </div>
           </div>
         </div>
       </div>
-      <el-empty v-if="!list.length && !loading" description="暂无农户供应商品" />
+      <el-empty v-if="!loading && products.length === 0" description="暂无商品数据，点击上方按钮发布你的第一个商品">
+        <el-button type="primary" @click="openPublishDialog">立即发布</el-button>
+      </el-empty>
     </div>
+
+    <!-- Publish dialog -->
+    <el-dialog v-model="dialogVisible" title="发布农产品" width="550px" destroy-on-close>
+      <el-form :model="form" label-width="95px">
+        <el-form-item label="商品名称" required>
+          <el-input v-model="form.title" placeholder="如：有机红富士苹果" maxlength="50" show-word-limit />
+        </el-form-item>
+        <el-form-item label="价格" required>
+          <el-input-number v-model="form.price" :min="0" :precision="2" :step="0.5" controls-position="right" style="width:100%">
+            <template #suffix>元/斤</template>
+          </el-input-number>
+        </el-form-item>
+        <el-form-item label="商品类型" required>
+          <el-input v-model="form.type" placeholder="如：水果、蔬菜、粮食等" />
+        </el-form-item>
+        <el-form-item label="产地地址" required>
+          <el-input v-model="form.address" placeholder="如：山东省烟台市栖霞市" />
+        </el-form-item>
+        <el-form-item label="商品描述" required>
+          <el-input v-model="form.content" type="textarea" :rows="4" placeholder="品质特点、种植方式、供货量等" maxlength="300" show-word-limit />
+        </el-form-item>
+        <el-form-item label="商品图片">
+          <div class="image-upload-container">
+            <div v-if="imagePreview" class="image-preview">
+              <img :src="imagePreview" alt="预览" />
+              <div class="image-preview-actions">
+                <el-button type="danger" size="small" :icon="Delete" circle @click="removeImage" />
+              </div>
+            </div>
+            <el-upload v-else :show-file-list="false" :on-change="handleImageChange" :auto-upload="false"
+              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" class="image-uploader">
+              <div class="upload-trigger">
+                <el-icon :size="32"><Plus /></el-icon>
+                <div>点击上传图片</div>
+                <div class="upload-hint">JPG / PNG / GIF / WEBP，最大 5MB</div>
+              </div>
+            </el-upload>
+            <div v-if="!imagePreview" class="url-input-section">
+              <div class="url-divider">或使用图片链接</div>
+              <div class="url-input-row">
+                <el-input v-model="imageUrlInput" placeholder="请输入图片URL地址" clearable style="flex:1" />
+                <el-button type="primary" size="small" @click="useImageUrl">确定</el-button>
+              </div>
+            </div>
+          </div>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="submitPublish">确认发布</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
+.products-page { max-width: 1200px; }
+
 .page-head {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  align-items: flex-start;
+  margin-bottom: 24px;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
 }
-.page-title { font-size: 20px; font-weight: 600; color: #222; margin: 0; }
-.search-area { display: flex; align-items: center; }
+.page-title { font-size: 24px; font-weight: 800; color: var(--green-deep); margin: 0 0 4px; }
+.page-sub { font-size: 14px; color: var(--text-muted); margin: 0; }
+.publish-btn {
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .goods-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 20px;
+  gap: 16px;
 }
 @media (max-width: 1200px) { .goods-grid { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 900px) { .goods-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 600px) { .goods-grid { grid-template-columns: repeat(2, 1fr); } }
+
 .goods-card {
-  background: #fff;
-  border-radius: 6px;
-  box-shadow: 0 1px 4px #eee;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
   overflow: hidden;
-  transition: box-shadow 0.2s;
+  transition: all 0.25s;
 }
-.goods-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+.goods-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
 .goods-img {
   width: 100%;
-  height: 160px;
-  background: #f5f7fa;
+  height: 180px;
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 42px;
-  color: #c0c4cc;
+  font-size: 48px;
+  overflow: hidden;
 }
-.goods-info { padding: 10px 12px; }
-.goods-title { font-size: 14px; color: #333; margin-bottom: 6px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.price { color: #f03030; font-size: 16px; font-weight: bold; }
-.goods-price { display: flex; justify-content: space-between; align-items: center; }
-.goods-seller { font-size: 12px; color: #999; }
-.goods-extra { font-size: 12px; color: #aaa; margin-top: 2px; }
+.goods-img img { width: 100%; height: 100%; object-fit: cover; }
+.goods-img span { display: none; }
+
+.goods-info { padding: 14px; }
+.goods-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 8px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.goods-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.price { color: var(--amber); font-size: 18px; font-weight: 700; }
+.goods-seller { font-size: 12px; color: var(--text-muted); }
+.goods-tags { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+.goods-actions { display: flex; gap: 8px; }
+.goods-actions .el-button { flex: 1; }
+
+/* Image upload */
+.image-upload-container { width: 100%; }
+.image-uploader { width: 100%; }
+.upload-trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 160px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.3s;
+  background: var(--bg);
+}
+.upload-trigger:hover { border-color: var(--green); background: var(--green-mist); }
+.upload-trigger .el-icon { color: var(--text-muted); margin-bottom: 8px; }
+.upload-trigger > div { font-size: 14px; color: var(--text-secondary); }
+.upload-hint { font-size: 12px; color: var(--text-muted) !important; margin-top: 2px; }
+.image-preview {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg);
+}
+.image-preview img { width: 100%; height: 100%; object-fit: contain; }
+.image-preview-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+.url-input-section { margin-top: 16px; }
+.url-divider {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  position: relative;
+  margin-bottom: 12px;
+}
+.url-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 40%;
+  height: 1px;
+  background: var(--border);
+}
+.url-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 40%;
+  height: 1px;
+  background: var(--border);
+}
+.url-input-row { display: flex; gap: 8px; }
 </style>

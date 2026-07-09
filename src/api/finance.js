@@ -30,6 +30,14 @@ export function getRecommendPartnersAPI(amount, item) {
   })
 }
 
+// 获取银行融资产品列表
+export function getFinancingProductsAPI() {
+  return request({
+    url: '/api/v1/finance/products',
+    method: 'get'
+  })
+}
+
 // ====== 银行端 API ======
 export function getAllFinancesAPI() {
   return request({ url: '/api/v1/finance/bank/list', method: 'get' })

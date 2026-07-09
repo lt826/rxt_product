@@ -22,7 +22,7 @@ onMounted(async () => {
         date: a.createTime ? a.createTime.substring(0, 10) : '-'
       }))
     }
-  } catch (e) {
+  } catch {
     ElMessage.error('获取知识列表失败')
   } finally {
     loading.value = false
@@ -36,14 +36,18 @@ function openArticle(a) {
 </script>
 
 <template>
-  <div>
-    <h2 class="page-title">农业知识</h2>
+  <div class="knowledge-page">
+    <div class="page-head">
+      <div>
+        <h2 class="page-title">农业知识</h2>
+        <p class="page-sub">学习种植技术，提升农业水平</p>
+      </div>
+    </div>
+
     <div v-loading="loading" class="agri-grid">
       <div v-for="article in articles" :key="article.id" class="agri-card" @click="openArticle(article)">
-        <div class="agri-img">
-          <span>🌾</span>
-        </div>
-        <div class="agri-text">
+        <div class="agri-card-body">
+          <div class="agri-icon">📖</div>
           <h3 class="agri-title">{{ article.title }}</h3>
           <p class="agri-content">{{ article.desc }}</p>
           <div class="agri-meta">
@@ -55,9 +59,8 @@ function openArticle(a) {
     </div>
     <el-empty v-if="!loading && articles.length === 0" description="暂无知识文章" />
 
-    <!-- 文章详情弹窗 -->
-    <el-dialog v-model="dialogVisible" :title="currentArticle?.title" width="700px" class="article-dialog">
-      <div v-if="currentArticle" class="article-content">
+    <el-dialog v-model="dialogVisible" :title="currentArticle?.title" width="700px" destroy-on-close>
+      <div v-if="currentArticle" class="article-view">
         <div class="article-meta">
           <span>发布者：{{ currentArticle.author }}</span>
           <span>发布时间：{{ currentArticle.date }}</span>
@@ -69,56 +72,43 @@ function openArticle(a) {
 </template>
 
 <style scoped>
-.page-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #222;
-  margin: 0 0 20px;
-}
+.knowledge-page { max-width: 1200px; }
+.page-head { margin-bottom: 24px; }
+.page-title { font-size: 24px; font-weight: 800; color: var(--green-deep); margin: 0 0 4px; }
+.page-sub { font-size: 14px; color: var(--text-muted); margin: 0; }
+
 .agri-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
+  gap: 16px;
 }
-@media (max-width: 800px) {
-  .agri-grid { grid-template-columns: 1fr; }
-}
+@media (max-width: 800px) { .agri-grid { grid-template-columns: 1fr; } }
+
 .agri-card {
-  background: #fff;
-  display: flex;
-  border-radius: 6px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px #eee;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
   cursor: pointer;
-  transition: box-shadow 0.2s;
+  transition: all 0.25s;
 }
 .agri-card:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
-.agri-img {
-  width: 200px;
-  min-height: 150px;
-  background: #eef8e9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 56px;
-  flex-shrink: 0;
-}
-.agri-text {
-  padding: 16px 20px;
-  flex: 1;
-}
+.agri-card-body { display: flex; flex-direction: column; gap: 12px; }
+.agri-icon { font-size: 32px; }
 .agri-title {
   font-size: 17px;
-  margin-bottom: 8px;
-  color: #222;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--green-deep);
+  margin: 0;
 }
 .agri-content {
   font-size: 14px;
-  color: #555;
-  line-height: 1.6;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -127,23 +117,22 @@ function openArticle(a) {
 .agri-meta {
   display: flex;
   justify-content: space-between;
-  margin-top: 12px;
   font-size: 13px;
-  color: #999;
+  color: var(--text-muted);
 }
 
-.article-dialog .article-meta {
+.article-view .article-meta {
   display: flex;
   gap: 20px;
-  color: #909399;
+  color: var(--text-muted);
   font-size: 14px;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #ebeef5;
+  border-bottom: 1px solid var(--border);
 }
-.article-dialog .article-body {
+.article-view .article-body {
   line-height: 1.8;
-  color: #303133;
+  color: var(--text);
   white-space: pre-wrap;
   font-size: 15px;
 }

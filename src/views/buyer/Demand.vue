@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '../../api/index'
 
@@ -27,7 +27,6 @@ function openCreate() {
   Object.assign(form, { goodsId: null, title: '', price: null, content: '', address: '' })
   dialogVisible.value = true
 }
-
 function openEdit(row) {
   editing.value = true
   Object.assign(form, { goodsId: row.goodsId, title: row.title, price: row.price, content: row.content, address: row.address || '' })
@@ -45,8 +44,13 @@ async function submit() {
     ElMessage.success('修改成功')
   } else {
     payload.type = '2'
-    await request({ url: '/api/v1/goods/publish', method: 'post', data: payload })
-    ElMessage.success('发布成功')
+    const res = await request({ url: '/api/v1/goods/publish', method: 'post', data: payload })
+    if (res && res.code === 200) {
+      ElMessage.success('发布成功')
+    } else {
+      ElMessage.error(res?.message || '发布失败')
+      return
+    }
   }
   dialogVisible.value = false
   loadList()
@@ -59,41 +63,55 @@ async function remove(row) {
   loadList()
 }
 
-loadList()
+onMounted(() => { loadList() })
 </script>
 
 <template>
-  <div>
+  <div class="demand-page">
     <div class="page-head">
-      <h2 class="page-title">收购需求</h2>
-      <el-button type="primary" :icon="'Plus'" @click="openCreate">发布收购需求</el-button>
+      <div>
+        <h2 class="page-title">收购需求</h2>
+        <p class="page-sub">发布你的采购需求，让农户主动联系你</p>
+      </div>
+      <el-button type="primary" @click="openCreate">
+        <el-icon style="margin-right:4px"><Plus /></el-icon> 发布需求
+      </el-button>
     </div>
-    <el-table :data="list" v-loading="loading" border stripe style="width:100%">
-      <el-table-column type="index" label="#" width="50" />
-      <el-table-column prop="title" label="农产品" min-width="200" />
-      <el-table-column label="最高收购价" width="120">
-        <template #default="{ row }">¥{{ row.price || '面议' }}</template>
-      </el-table-column>
-      <el-table-column prop="content" label="需求详情" min-width="260">
-        <template #default="{ row }"><span class="ellipsis">{{ row.content }}</span></template>
-      </el-table-column>
-      <el-table-column prop="address" label="收货地址" width="160">
-        <template #default="{ row }">{{ row.address || '-' }}</template>
-      </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right">
-        <template #default="{ row }">
-          <el-button size="small" type="primary" link @click="openEdit(row)">编辑</el-button>
-          <el-button size="small" type="danger" link @click="remove(row)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-    <el-empty v-if="!list.length && !loading" description="还没有发布收购需求" />
 
-    <el-dialog v-model="dialogVisible" :title="editing ? '编辑需求' : '发布收购需求'" width="620px">
+    <el-card shadow="never" v-loading="loading">
+      <el-table :data="list" stripe>
+        <el-table-column type="index" label="#" width="50" />
+        <el-table-column prop="title" label="农产品" min-width="200">
+          <template #default="{ row }">
+            <span style="font-weight:600;color:var(--text)">{{ row.title }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="最高收购价" width="120">
+          <template #default="{ row }"><span class="price-tag">¥{{ row.price || '面议' }}</span></template>
+        </el-table-column>
+        <el-table-column prop="content" label="需求详情" min-width="260">
+          <template #default="{ row }"><span class="ellipsis">{{ row.content }}</span></template>
+        </el-table-column>
+        <el-table-column prop="address" label="收货地址" width="160">
+          <template #default="{ row }">{{ row.address || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" type="primary" link @click="openEdit(row)">编辑</el-button>
+            <el-button size="small" type="danger" link @click="remove(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-empty v-if="!list.length && !loading" description="还没有发布收购需求">
+        <el-button type="primary" @click="openCreate">立即发布</el-button>
+      </el-empty>
+    </el-card>
+
+    <el-dialog v-model="dialogVisible" :title="editing ? '编辑需求' : '发布收购需求'" width="620px" destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="农产品名称" prop="title"><el-input v-model="form.title" placeholder="如：有机大米" /></el-form-item>
-        <el-form-item label="最高收购价"><el-input-number v-model="form.price" :precision="2" :min="0" style="width:100%" placeholder="元/kg（可选，空表示面议）" /></el-form-item>
-        <el-form-item label="需求详情" prop="content"><el-input v-model="form.content" type="textarea" :rows="4" placeholder="描述需求量、规格、品质要求等" /></el-form-item>
+        <el-form-item label="最高收购价" prop="price"><el-input-number v-model="form.price" :precision="2" :min="0" style="width:100%" placeholder="元/kg（可选，空表示面议）" /></el-form-item>
+        <el-form-item label="需求详情" prop="content"><el-input v-model="form.content" type="textarea" :rows="4" placeholder="需求量、规格、品质要求等" /></el-form-item>
         <el-form-item label="收货地址"><el-input v-model="form.address" placeholder="收货地址（可选）" /></el-form-item>
       </el-form>
       <template #footer>
@@ -105,7 +123,17 @@ loadList()
 </template>
 
 <style scoped>
-.page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.page-title { font-size: 20px; font-weight: 600; color: #303133; margin: 0; }
+.demand-page { max-width: 1200px; }
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.page-title { font-size: 24px; font-weight: 800; color: var(--green-deep); margin: 0 0 4px; }
+.page-sub { font-size: 14px; color: var(--text-muted); margin: 0; }
+.price-tag { color: var(--amber); font-weight: 700; font-size: 16px; }
 .ellipsis { display: inline-block; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>
