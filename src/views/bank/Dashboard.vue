@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div>
     <h2 class="page-title">银行工作台</h2>
     <div class="stats-grid" v-loading="loading">
@@ -77,9 +77,10 @@ async function handleReject(row) {
 onMounted(loadData)
 </script>
 <style scoped>
-.page-title { font-size:20px;font-weight:600;color:#303133;margin:0 0 20px }
-.stats-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px }
-.stat-card { background:#fff;border-radius:8px;padding:24px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.06) }
-.stat-value { font-size:28px;font-weight:700;line-height:1 }
-.stat-label { margin-top:8px;font-size:14px;color:#909399 }
+.page-title { font-size:20px;font-weight:600;color:#222;margin:0 0 20px }
+.stats-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:20px;margin-bottom:24px }
+.stat-card { background:#fff;border-radius:6px;box-shadow:0 1px 4px #eee;padding:20px 16px;text-align:center }
+.stat-value { font-size:26px;font-weight:700;line-height:1;margin-bottom:4px }
+.stat-label { font-size:14px;color:#666 }
 </style>
+

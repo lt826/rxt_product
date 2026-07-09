@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div>
     <h2 class="page-title">融资产品配置</h2>
     <div style="margin-bottom:16px"><el-button type="primary" @click="dialogVisible=true">新增产品</el-button></div>
@@ -29,5 +29,5 @@ const products = ref([
 function save() { dialogVisible.value = false; ElMessage.success('产品已创建') }
 </script>
 <style scoped>
-.page-title { font-size:20px;font-weight:600;color:#303133;margin:0 0 20px }
+.page-title { font-size:20px;font-weight:600;color:#222;margin:0 0 20px }
 </style>

@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, onMounted, computed } from 'vue'
 import { getStatsOverviewAPI } from '../../api/admin'
 
@@ -117,7 +117,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.page-title { font-size:20px;font-weight:600;color:#303133;margin:0 0 20px }
+.page-title { font-size:20px;font-weight:600;color:#222;margin:0 0 20px }
 .kpi-value { font-size:28px;font-weight:700;color:#303133;line-height:1;margin-bottom:4px }
 .kpi-label { font-size:14px;color:#909399;margin-bottom:4px }
 .kpi-change { font-size:13px;font-weight:500 }

@@ -86,7 +86,7 @@ loadList()
 </template>
 
 <style scoped>
-.page-title { font-size: 20px; font-weight: 600; color: #303133; margin: 0 0 20px; }
+.page-title { font-size: 20px; font-weight: 600; color: #222; margin: 0 0 20px; }
 .qa-item { padding: 20px 0; border-bottom: 1px solid #ebeef5; }
 .qa-item:last-child { border: none; }
 .qa-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }

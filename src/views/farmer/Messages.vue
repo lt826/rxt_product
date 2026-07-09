@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div>
     <h2 class="page-title">消息通知</h2>
     <el-card>
@@ -24,7 +24,7 @@ const messages = [
 </script>
 
 <style scoped>
-.page-title { font-size: 20px; font-weight: 600; color: #303133; margin: 0 0 20px; }
+.page-title { font-size: 20px; font-weight: 600; color: #222; margin: 0 0 20px; }
 .msg-item { display: flex; gap: 12px; padding: 16px 0; border-bottom: 1px solid #ebeef5; }
 .msg-item:last-child { border: none; }
 .msg-item.unread { background: #ecf5ff; margin: 0 -16px; padding: 16px; border-radius: 8px; }

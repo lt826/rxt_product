@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div>
     <h2 class="page-title">联系农户</h2>
     <el-card><template #header><span>意向农户列表</span></template><div v-for="f in farmers" :key="f.id" class="farmer-card"><div class="farmer-info"><div class="farmer-avatar">{{ f.avatar }}</div><div><div class="farmer-name">{{ f.name }}</div><div class="farmer-detail">{{ f.product }} · {{ f.location }}</div></div></div><div><el-button size="small" type="primary" @click="contact(f)">联系</el-button></div></div></el-card>
@@ -14,7 +14,7 @@ const farmers = [
 function contact(f) { ElMessage.success(`已发送联系请求给 ${f.name}`) }
 </script>
 <style scoped>
-.page-title { font-size:20px;font-weight:600;color:#303133;margin:0 0 20px }
+.page-title { font-size:20px;font-weight:600;color:#222;margin:0 0 20px }
 .farmer-card { display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid #ebeef5 }
 .farmer-card:last-child { border:none }
 .farmer-info { display:flex;align-items:center;gap:12px }

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div>
     <h2 class="page-title">融资审批</h2>
     <el-card v-loading="loading"><template #header><span>融资申请列表</span></template><el-table :data="applications" border stripe><el-table-column prop="financeId" label="编号" width="170" /><el-table-column prop="ownName" label="农户" width="90" /><el-table-column prop="money" label="申请金额" width="120" /><el-table-column prop="repayment" label="期限" width="80" /><el-table-column label="状态" width="100"><template #default="{row}"><el-tag :type="row.status==='待审批'?'warning':row.status==='已通过'?'success':'danger'">{{row.status}}</el-tag></template></el-table-column><el-table-column label="操作" width="160"><template #default="{row}"><el-button size="small" type="primary" :disabled="row._status !== 0" @click="approve(row)">通过</el-button><el-button size="small" type="danger" :disabled="row._status !== 0" @click="reject(row)">驳回</el-button></template></el-table-column></el-table><el-empty v-if="!loading && applications.length === 0" description="暂无融资申请" /></el-card>
@@ -56,5 +56,6 @@ async function reject(row) {
 onMounted(loadList)
 </script>
 <style scoped>
-.page-title { font-size:20px;font-weight:600;color:#303133;margin:0 0 20px }
+.page-title { font-size:20px;font-weight:600;color:#222;margin:0 0 20px }
 </style>
+

@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUsersAPI, getUserDetailAPI, createUserAPI, updateUserAPI, deleteUserAPI } from '../../api/admin'
@@ -200,5 +200,5 @@ onMounted(loadUsers)
 </template>
 
 <style scoped>
-.page-title { font-size:20px;font-weight:600;color:#303133;margin:0 0 20px }
+.page-title { font-size:20px;font-weight:600;color:#222;margin:0 0 20px }
 </style>

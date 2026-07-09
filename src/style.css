@@ -1,15 +1,139 @@
-﻿*, *::before, *::after {
-  box-sizing: border-box;
+﻿/* ===== 融销通全局样式 ===== */
+:root {
+  --primary: #488d37;
+  --primary-hover: #59a044;
+  --primary-light: #eef8e9;
+  --danger: #ed4949;
+  --price: #f03030;
+  --orange: #f2a62c;
+  --bg: #f8f9fa;
+  --card-bg: #fff;
+  --border: #eee;
+  --text: #333;
+  --text-light: #666;
+  --shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+* {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
 }
 
 html {
-  font-family: system-ui, -apple-system, sans-serif;
-  color: #333;
-  background: #fff;
+  font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", sans-serif;
+  color: var(--text);
+  background: var(--bg);
 }
 
 #app {
   min-height: 100vh;
+}
+
+/* ===== Element Plus 全局覆写 ===== */
+.el-card {
+  border: none !important;
+  border-radius: 6px !important;
+  box-shadow: var(--shadow) !important;
+}
+.el-card__header {
+  border-bottom: 1px solid var(--border) !important;
+  padding: 14px 20px !important;
+  font-weight: 600;
+  font-size: 15px;
+  color: #222;
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--primary) !important;
+  --el-button-border-color: var(--primary) !important;
+  --el-button-hover-bg-color: var(--primary-hover) !important;
+  --el-button-hover-border-color: var(--primary-hover) !important;
+}
+.el-button--primary.is-link {
+  --el-button-bg-color: transparent !important;
+  --el-button-border-color: transparent !important;
+  --el-button-hover-bg-color: var(--primary-light) !important;
+}
+
+.el-table {
+  border-radius: 6px !important;
+  overflow: hidden !important;
+}
+.el-table th.el-table__cell {
+  background: #f8f9fa !important;
+  color: #555 !important;
+  font-weight: 600 !important;
+}
+.el-table--border {
+  border: 1px solid var(--border) !important;
+}
+
+.el-table--striped .el-table__body tr.el-table__row--striped td {
+  background: #fafbfc !important;
+}
+
+.el-tag {
+  border: none !important;
+}
+.el-tag--warning {
+  --el-tag-bg-color: #fff3e0 !important;
+  --el-tag-text-color: #e6a23c !important;
+}
+.el-tag--success {
+  --el-tag-bg-color: #e8f5e9 !important;
+  --el-tag-text-color: #67c23a !important;
+}
+.el-tag--danger {
+  --el-tag-bg-color: #ffebee !important;
+  --el-tag-text-color: #f56c6c !important;
+}
+.el-tag--info {
+  --el-tag-bg-color: #f5f5f5 !important;
+  --el-tag-text-color: #909399 !important;
+}
+
+.el-empty {
+  padding: 40px 0 !important;
+}
+
+.el-drawer {
+  border-radius: 6px 0 0 6px !important;
+}
+
+.el-dialog {
+  border-radius: 6px !important;
+}
+
+/* ===== 全局辅助类 ===== */
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #222;
+  margin: 0 0 20px;
+}
+
+.price {
+  color: var(--price);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.green-badge {
+  display: inline-block;
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 2px 10px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--primary);
+  display: inline-block;
 }

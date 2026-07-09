@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { applyFinanceAPI, getMyFinancesAPI } from '../../api/finance'
@@ -113,5 +113,5 @@ onMounted(loadRecords)
 </template>
 
 <style scoped>
-.page-title { font-size: 20px; font-weight: 600; color: #303133; margin: 0 0 20px; }
+.page-title { font-size: 20px; font-weight: 600; color: #222; margin: 0 0 20px; }
 </style>

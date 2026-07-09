@@ -142,7 +142,7 @@ loadList()
 </template>
 
 <style scoped>
-.page-title { font-size: 20px; font-weight: 600; color: #303133; margin: 0 0 20px; }
+.page-title { font-size: 20px; font-weight: 600; color: #222; margin: 0 0 20px; }
 .apt-card { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid #ebeef5; align-items: flex-start; }
 .apt-card:last-child { border: none; }
 .apt-main { flex: 1; cursor: pointer; }

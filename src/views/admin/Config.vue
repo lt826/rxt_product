@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div>
     <h2 class="page-title">系统配置</h2>
     <el-card style="margin-bottom:20px"><template #header><span>平台参数</span></template><el-form label-width="180px">
@@ -19,4 +19,4 @@ const config = ref({ platformName:'rxt农业产融平台', phone:'400-888-8888',
 const templates = ref([{ code:'FINANCE_SUBMIT', name:'融资提交通知' }, { code:'FINANCE_APPROVED', name:'融资审批通过' }, { code:'QA_REPLY', name:'问题回复通知' }, { code:'APPOINTMENT', name:'预约确认通知' }])
 function saveConfig() { ElMessage.success('配置已保存') }
 </script>
-<style scoped>.page-title {font-size:20px;font-weight:600;color:#303133;margin:0 0 20px}</style>
+<style scoped>.page-title {font-size:20px;font-weight:600;color:#222;margin:0 0 20px}</style>

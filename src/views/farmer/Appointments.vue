@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { applyReserveAPI, getMyReservesAPI } from '../../api/reserve'
@@ -130,7 +130,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.page-title { font-size: 20px; font-weight: 600; color: #303133; margin: 0 0 20px; }
+.page-title { font-size: 20px; font-weight: 600; color: #222; margin: 0 0 20px; }
 .expert-card { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid #ebeef5; }
 .expert-card:last-child { border: none; }
 .expert-info { display: flex; align-items: center; gap: 12px; }
