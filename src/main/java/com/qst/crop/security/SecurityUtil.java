@@ -1,18 +1,21 @@
 package com.qst.crop.security;
 
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
- * 鑾峰彇褰撳墠鐧诲綍鐢ㄦ埛鍚嶇殑宸ュ叿绫?
+ * 安全工具类
  */
 public final class SecurityUtil {
+
+    private static final BCryptPasswordEncoder PASSWORD_ENCODER = new BCryptPasswordEncoder();
 
     private SecurityUtil() {
     }
 
     /**
-     * 杩斿洖褰撳墠鐧诲綍鐨勭敤鎴峰悕锛屾湭鐧诲綍鏃惰繑鍥?null
+     * 返回当前登录的用户名，未登录时返回null
      */
     public static String getCurrentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -20,5 +23,24 @@ public final class SecurityUtil {
             return null;
         }
         return String.valueOf(auth.getPrincipal());
+    }
+
+    /**
+     * 加密密码
+     * @param rawPassword 原始密码
+     * @return 加密后的密码
+     */
+    public static String encryptPassword(String rawPassword) {
+        return PASSWORD_ENCODER.encode(rawPassword);
+    }
+
+    /**
+     * 验证密码
+     * @param rawPassword 原始密码
+     * @param encodedPassword 加密后的密码
+     * @return 密码是否匹配
+     */
+    public static boolean matchesPassword(String rawPassword, String encodedPassword) {
+        return PASSWORD_ENCODER.matches(rawPassword, encodedPassword);
     }
 }

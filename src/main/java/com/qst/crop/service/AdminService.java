@@ -11,4 +11,17 @@ public interface AdminService {
     boolean updateUser(User user);
     boolean deleteUser(String userName);
     Map<String, Object> getStatsOverview();
+
+    /**
+     * 获取待审批用户列表
+     */
+    List<User> getPendingUsers();
+
+    /**
+     * 审批用户
+     * @param userName 用户名
+     * @param approved true-通过，false-拒绝
+     * @return 是否成功
+     */
+    boolean approveUser(String userName, boolean approved);
 }

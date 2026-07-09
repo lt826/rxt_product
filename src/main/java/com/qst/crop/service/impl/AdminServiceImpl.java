@@ -8,6 +8,7 @@ import com.qst.crop.dao.UserMapper;
 import com.qst.crop.entity.Expert;
 import com.qst.crop.entity.Finance;
 import com.qst.crop.entity.User;
+import com.qst.crop.security.SecurityUtil;
 import com.qst.crop.service.AdminService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +57,10 @@ public class AdminServiceImpl implements AdminService {
         if (userMapper.selectOne(wrapper) != null) {
             return false;
         }
+        // 加密密码
+        if (user.getPassword() != null && !user.getPassword().isEmpty()) {
+            user.setPassword(SecurityUtil.encryptPassword(user.getPassword()));
+        }
         LocalDateTime now = LocalDateTime.now();
         user.setCreateTime(now);
         user.setUpdateTime(now);
@@ -81,6 +86,11 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public boolean updateUser(User user) {
+        // 如果密码不为空且不是已加密的密码（BCrypt密文以$2a$或$2b$开头），则进行加密
+        if (user.getPassword() != null && !user.getPassword().isEmpty()
+                && !user.getPassword().startsWith("$2")) {
+            user.setPassword(SecurityUtil.encryptPassword(user.getPassword()));
+        }
         user.setUpdateTime(LocalDateTime.now());
         int result = userMapper.updateById(user);
         return result > 0;
@@ -194,5 +204,49 @@ public class AdminServiceImpl implements AdminService {
         stats.put("totalOrders", totalOrders);
 
         return stats;
+    }
+
+    @Override
+    public List<User> getPendingUsers() {
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.eq("status", "pending");
+        wrapper.orderByDesc("create_time");
+        return userMapper.selectList(wrapper);
+    }
+
+    @Override
+    public boolean approveUser(String userName, boolean approved) {
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.eq("user_name", userName);
+        User user = userMapper.selectOne(wrapper);
+        if (user == null) {
+            return false;
+        }
+
+        user.setStatus(approved ? "approved" : "rejected");
+        user.setUpdateTime(LocalDateTime.now());
+
+        // 如果审批通过且是专家角色，创建专家信息
+        if (approved && "expert".equalsIgnoreCase(user.getRole())) {
+            QueryWrapper<Expert> expertWrapper = new QueryWrapper<>();
+            expertWrapper.eq("user_name", userName);
+            if (expertMapper.selectCount(expertWrapper) == 0) {
+                Expert expert = new Expert();
+                expert.setUserName(user.getUserName());
+                expert.setRealName(user.getRealName());
+                expert.setPhone(user.getPhone());
+                expert.setProfession("农业技术");
+                expert.setPosition("专家");
+                expert.setBelong("融销通平台");
+                try {
+                    expertMapper.insert(expert);
+                } catch (Exception e) {
+                    log.warn("创建专家信息失败: {}", e.getMessage());
+                }
+            }
+        }
+
+        int result = userMapper.updateById(user);
+        return result > 0;
     }
 }

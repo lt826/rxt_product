@@ -52,4 +52,7 @@ public class User {
 
     /** 真实姓名 */
     private String realName;
+
+    /** 状态：pending-待审批，approved-已通过，rejected-已拒绝 */
+    private String status;
 }

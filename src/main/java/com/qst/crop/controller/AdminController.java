@@ -64,4 +64,27 @@ public class AdminController {
         Map<String, Object> stats = adminService.getStatsOverview();
         return Result.success("查询成功", stats);
     }
+
+    /**
+     * 获取待审批用户列表
+     */
+    @GetMapping("/users/pending")
+    public Result<List<User>> getPendingUsers() {
+        List<User> list = adminService.getPendingUsers();
+        return Result.success("查询成功", list);
+    }
+
+    /**
+     * 审批用户
+     * @param userName 用户名
+     * @param approved true-通过，false-拒绝
+     */
+    @PostMapping("/users/{userName}/approve")
+    public Result<String> approveUser(@PathVariable String userName, @RequestParam boolean approved) {
+        boolean success = adminService.approveUser(userName, approved);
+        if (success) {
+            return Result.success(approved ? "审批通过" : "已拒绝", null);
+        }
+        return Result.error(404, "用户不存在");
+    }
 }

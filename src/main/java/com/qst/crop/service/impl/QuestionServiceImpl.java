@@ -30,6 +30,10 @@ public class QuestionServiceImpl implements QuestionService {
                 question.setPhone(user.getPhone());
             }
         }
+        // 若未填写作物名称，设置默认值
+        if (question.getPlantName() == null || question.getPlantName().isEmpty()) {
+            question.setPlantName("通用");
+        }
         question.setStatus(0);
         questionMapper.insert(question);
         return question;
