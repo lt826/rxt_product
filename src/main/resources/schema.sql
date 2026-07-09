@@ -283,3 +283,19 @@ CREATE TABLE tb_shoppingcart (
     update_time DATETIME DEFAULT NULL COMMENT '更新时间',
     PRIMARY KEY (shopping_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='购物车表';
+
+-- ==============================================
+-- 17. 买家-农户消息表
+-- ==============================================
+DROP TABLE IF EXISTS tb_message;
+CREATE TABLE tb_message (
+    message_id  INT          NOT NULL AUTO_INCREMENT COMMENT '消息ID',
+    from_user   VARCHAR(50)  NOT NULL COMMENT '发送方用户名',
+    to_user     VARCHAR(50)  NOT NULL COMMENT '接收方用户名',
+    content     TEXT         NOT NULL COMMENT '消息内容',
+    is_read     INT          DEFAULT 0 COMMENT '是否已读(0:未读,1:已读)',
+    create_time DATETIME     DEFAULT NULL COMMENT '创建时间',
+    PRIMARY KEY (message_id),
+    INDEX idx_from_to (from_user, to_user, create_time),
+    INDEX idx_to_read (to_user, is_read, create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='买家-农户消息表';

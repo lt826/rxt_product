@@ -36,8 +36,31 @@ public class WebSecurityConfig {
 
                 // 权限控制
                 .authorizeHttpRequests(auth -> auth
+                        // 公开接口：登录、注册
                         .requestMatchers("/api/v1/user/login").permitAll()
                         .requestMatchers("/api/v1/user/register").permitAll()
+
+                        // 商品浏览：所有用户都可以访问（包括未登录）
+                        .requestMatchers("/api/v1/goods/list").permitAll()
+                        .requestMatchers("/api/v1/goods/detail/**").permitAll()
+
+                        // 商品发布：农户可以发布销售商品(type=1)，买家可以发布收购需求(type=2)
+                        .requestMatchers("/api/v1/goods/publish").hasAnyRole("FARMER", "BUYER", "ADMIN")
+                        .requestMatchers("/api/v1/goods/update").hasAnyRole("FARMER", "BUYER", "ADMIN")
+                        .requestMatchers("/api/v1/goods/delete/**").hasAnyRole("FARMER", "BUYER", "ADMIN")
+                        .requestMatchers("/api/v1/goods/my").hasAnyRole("FARMER", "BUYER", "ADMIN")
+
+                        // 买家和农户都可以访问自己的购物车相关
+                        .requestMatchers("/api/v1/cart/**").hasAnyRole("BUYER", "FARMER", "ADMIN")
+
+                        // 消息和农户列表：需要登录即可
+                        .requestMatchers("/api/v1/message/**").authenticated()
+                        .requestMatchers("/api/v1/farmers").authenticated()
+
+                        // 买家工作台：需要 BUYER 或 ADMIN 角色
+                        .requestMatchers("/api/v1/buyer/**").hasAnyRole("BUYER", "ADMIN")
+
+                        // 认证接口：其他所有请求都需要登录
                         .anyRequest().authenticated()
                 )
 

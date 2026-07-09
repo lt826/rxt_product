@@ -7,8 +7,12 @@ import com.qst.crop.model.LoginDTO;
 import com.qst.crop.model.LoginVO;
 import com.qst.crop.service.ExpertService;
 import com.qst.crop.service.UserService;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.qst.crop.dao.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -19,6 +23,9 @@ public class UserController {
 
     @Autowired
     private ExpertService expertService;
+
+    @Autowired
+    private UserMapper userMapper;
 
     @PostMapping("/user/login")
     public Result<LoginVO> login(@RequestBody LoginDTO loginDTO) {
@@ -70,5 +77,13 @@ public class UserController {
             return Result.success("更新成功", null);
         }
         return Result.error(400, "更新失败");
+    }
+
+    /** 获取所有农户列表（用于买家联系） */
+    @GetMapping("/farmers")
+    public Result<List<User>> farmers() {
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.eq("role", "farmer");
+        return Result.success("查询成功", userMapper.selectList(wrapper));
     }
 }

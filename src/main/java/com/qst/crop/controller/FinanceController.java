@@ -1,9 +1,11 @@
 package com.qst.crop.controller;
 
 import com.qst.crop.common.Result;
+import com.qst.crop.entity.Bank;
 import com.qst.crop.entity.Finance;
 import com.qst.crop.model.FinanceApplyDTO;
 import com.qst.crop.model.RecommendPartnerVO;
+import com.qst.crop.dao.BankMapper;
 import com.qst.crop.service.FinanceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -18,6 +20,9 @@ public class FinanceController {
 
     @Autowired
     private FinanceService financeService;
+
+    @Autowired
+    private BankMapper bankMapper;
 
     @GetMapping("/recommend-partners")
     public Result<List<RecommendPartnerVO>> recommendPartners(
@@ -53,6 +58,15 @@ public class FinanceController {
     @GetMapping("/bank/list")
     public Result<List<Finance>> getAllFinances() {
         return Result.success("查询成功", financeService.getAllFinances());
+    }
+
+    /**
+     * 获取银行融资产品列表（农户端工作台展示可用融资产品）
+     */
+    @GetMapping("/products")
+    public Result<List<Bank>> getFinancingProducts() {
+        List<Bank> products = bankMapper.selectList(null);
+        return Result.success("查询成功", products);
     }
 
     @PutMapping("/{id}/status")

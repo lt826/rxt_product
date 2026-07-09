@@ -19,7 +19,11 @@ public class GoodsServiceImpl implements GoodsService {
     @Override
     public List<Goods> listByType(String type, String keyword) {
         QueryWrapper<Goods> wrapper = new QueryWrapper<>();
-        wrapper.eq("type", type).orderByDesc("create_time");
+        // 只有当 type 不为空时才添加过滤条件
+        if (type != null && !type.trim().isEmpty()) {
+            wrapper.eq("type", type);
+        }
+        wrapper.orderByDesc("create_time");
         if (keyword != null && !keyword.trim().isEmpty()) {
             wrapper.and(w -> w.like("title", keyword).or().like("content", keyword));
         }
@@ -31,6 +35,10 @@ public class GoodsServiceImpl implements GoodsService {
         LocalDateTime now = LocalDateTime.now();
         goods.setCreateTime(now);
         goods.setUpdateTime(now);
+        // 设置默认状态：1-上架/有效
+        if (goods.getGoodsStatus() == null) {
+            goods.setGoodsStatus(1);
+        }
         goodsMapper.insert(goods);
         return goods;
     }
