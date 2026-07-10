@@ -25,6 +25,9 @@ const routes = [
     children: [
       { path: 'dashboard', name: 'FarmerDashboard', component: () => import('../views/farmer/Dashboard.vue'), meta: { title: '工作台' } },
       { path: 'financing', name: 'FarmerFinancing', component: () => import('../views/farmer/Financing.vue'), meta: { title: '融资申请' } },
+      { path: 'financing-intention', name: 'FarmerFinancingIntention', component: () => import('../views/farmer/FinancingIntention.vue'), meta: { title: '融资意向' } },
+      { path: 'partner-invitations', name: 'FarmerPartnerInvitations', component: () => import('../views/farmer/PartnerInvitations.vue'), meta: { title: '联合贷款邀请' } },
+      { path: 'smart-match', name: 'FarmerSmartMatch', component: () => import('../views/farmer/SmartMatch.vue'), meta: { title: '智能匹配' } },
       { path: 'products', name: 'FarmerProducts', component: () => import('../views/farmer/Products.vue'), meta: { title: '商品浏览' } },
       { path: 'knowledge', name: 'FarmerKnowledge', component: () => import('../views/farmer/Knowledge.vue'), meta: { title: '农业知识' } },
       { path: 'expert-qa', name: 'FarmerExpertQA', component: () => import('../views/farmer/ExpertQA.vue'), meta: { title: '专家问答' } },

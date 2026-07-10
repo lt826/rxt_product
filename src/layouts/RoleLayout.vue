@@ -15,13 +15,15 @@ const roleTitle = computed(() => route.meta.title)
 
 const ROLE_MENU_MAP = {
   farmer: [
-    { path: '/farmer/dashboard', label: '工作台', icon: 'Odometer' },
-    { path: '/farmer/products', label: '商品货源', icon: 'Goods' },
-    { path: '/farmer/financing', label: '融资申请', icon: 'Coin' },
-    { path: '/farmer/expert-qa', label: '专家问答', icon: 'ChatDotRound' },
-    { path: '/farmer/appointments', label: '专家预约', icon: 'Calendar' },
-    { path: '/farmer/knowledge', label: '农业知识', icon: 'Reading' },
-    { path: '/farmer/messages', label: '消息通知', icon: 'Bell' }
+    { path: "/farmer/dashboard", label: "工作台", icon: "Odometer" },
+    { path: "/farmer/products", label: "商品货源", icon: "Goods" },
+    { path: "/farmer/financing-intention", label: "融资意向", icon: "DocumentAdd" },
+    { path: "/farmer/financing", label: "融资申请", icon: "Coin" },
+    { path: "/farmer/partner-invitations", label: "联合贷款邀请", icon: "Connection" },
+    { path: "/farmer/expert-qa", label: "专家问答", icon: "ChatDotRound" },
+    { path: "/farmer/appointments", label: "专家预约", icon: "Calendar" },
+    { path: "/farmer/knowledge", label: "农业知识", icon: "Reading" },
+    { path: "/farmer/messages", label: "消息通知", icon: "Bell" }
   ],
   buyer: [
     { path: '/buyer/dashboard', label: '工作台', icon: 'Odometer' },
