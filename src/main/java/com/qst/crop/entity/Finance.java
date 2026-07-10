@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @TableName("tb_finance")
-public class Finance {
+public class    Finance {
 
     /** id */
     @TableId(value = "finance_id", type = IdType.AUTO)
@@ -75,4 +75,7 @@ public class Finance {
 
     /** 资料 */
     private String fileInfo;
+
+    /** 融资农作物 */
+    private String cropItem;
 }

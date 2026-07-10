@@ -299,3 +299,48 @@ CREATE TABLE tb_message (
     INDEX idx_from_to (from_user, to_user, create_time),
     INDEX idx_to_read (to_user, is_read, create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='买家-农户消息表';
+
+-- ==============================================
+-- 18. 联合贷款人邀请表
+-- 注意：本脚本含 DROP 语句仅作结构定义参考。实际建表由
+--       DatabaseSchemaInitializer 在启动时以 CREATE TABLE IF NOT EXISTS
+--       幂等执行，不会清空已有数据。
+-- ==============================================
+DROP TABLE IF EXISTS tb_partner_invitation;
+CREATE TABLE tb_partner_invitation (
+    id                  INT          NOT NULL AUTO_INCREMENT COMMENT '邀请ID',
+    applicant_user_name VARCHAR(50)  NOT NULL COMMENT '申请人用户名',
+    applicant_real_name VARCHAR(50)  DEFAULT '' COMMENT '申请人真实姓名',
+    applicant_phone     VARCHAR(20)  DEFAULT '' COMMENT '申请人电话',
+    invitee_user_name   VARCHAR(50)  NOT NULL COMMENT '被邀请人用户名',
+    invitee_real_name   VARCHAR(50)  DEFAULT '' COMMENT '被邀请人真实姓名',
+    invitee_phone       VARCHAR(20)  DEFAULT '' COMMENT '被邀请人电话',
+    project_description TEXT         DEFAULT NULL COMMENT '融资项目描述',
+    status              INT          NOT NULL DEFAULT 0 COMMENT '状态(0:待处理,1:已同意,2:已拒绝)',
+    create_time         DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time         DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    reply_time          DATETIME     DEFAULT NULL COMMENT '回复时间',
+    reply_remark        VARCHAR(255) DEFAULT NULL COMMENT '回复备注',
+    PRIMARY KEY (id),
+    INDEX idx_applicant (applicant_user_name),
+    INDEX idx_invitee (invitee_user_name),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='联合贷款人邀请表';
+
+-- ==============================================
+-- 19. 站内通知表
+-- ==============================================
+DROP TABLE IF EXISTS tb_notification;
+CREATE TABLE tb_notification (
+    id          INT          NOT NULL AUTO_INCREMENT COMMENT '通知ID',
+    receiver    VARCHAR(50)  NOT NULL COMMENT '接收人用户名',
+    title       VARCHAR(100) DEFAULT '' COMMENT '标题',
+    content     TEXT         DEFAULT NULL COMMENT '内容',
+    type        VARCHAR(50)  DEFAULT '' COMMENT '类型',
+    is_read     INT          DEFAULT 0 COMMENT '是否已读(0:未读,1:已读)',
+    related_id  INT          DEFAULT NULL COMMENT '关联ID',
+    create_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    INDEX idx_receiver (receiver),
+    INDEX idx_read (receiver, is_read)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='站内通知表';

@@ -9,4 +9,6 @@ public class RecommendPartnerVO {
     private String phone;
     private Integer credit;
     private Double matchScore;
+    private String cropItem; // 种植作物
+    private String address; // 地址
 }

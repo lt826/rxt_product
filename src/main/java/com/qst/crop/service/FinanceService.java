@@ -6,7 +6,7 @@ import com.qst.crop.model.RecommendPartnerVO;
 import java.util.List;
 
 public interface FinanceService {
-    List<RecommendPartnerVO> recommendPartners(Integer amount, String item);
+    List<RecommendPartnerVO> recommendPartners(String currentUserName, Integer amount, String item);
     Finance apply(String userName, FinanceApplyDTO dto);
     List<Finance> getMyFinances(String userName);
     Finance getFinanceById(Integer financeId);

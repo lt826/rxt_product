@@ -1,11 +1,14 @@
 package com.qst.crop.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.qst.crop.common.Result;
 import com.qst.crop.entity.Bank;
 import com.qst.crop.entity.Finance;
+import com.qst.crop.entity.FinancingProduct;
 import com.qst.crop.model.FinanceApplyDTO;
 import com.qst.crop.model.RecommendPartnerVO;
 import com.qst.crop.dao.BankMapper;
+import com.qst.crop.dao.FinancingProductMapper;
 import com.qst.crop.service.FinanceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -24,11 +27,16 @@ public class FinanceController {
     @Autowired
     private BankMapper bankMapper;
 
+    @Autowired
+    private FinancingProductMapper financingProductMapper;
+
     @GetMapping("/recommend-partners")
     public Result<List<RecommendPartnerVO>> recommendPartners(
+            Authentication auth,
             @RequestParam Integer amount,
             @RequestParam String item) {
-        List<RecommendPartnerVO> list = financeService.recommendPartners(amount, item);
+        String currentUserName = auth.getName();
+        List<RecommendPartnerVO> list = financeService.recommendPartners(currentUserName, amount, item);
         return Result.success("推荐成功", list);
     }
 
@@ -64,8 +72,11 @@ public class FinanceController {
      * 获取银行融资产品列表（农户端工作台展示可用融资产品）
      */
     @GetMapping("/products")
-    public Result<List<Bank>> getFinancingProducts() {
-        List<Bank> products = bankMapper.selectList(null);
+    public Result<List<FinancingProduct>> getFinancingProducts() {
+        QueryWrapper<FinancingProduct> wrapper = new QueryWrapper<>();
+        wrapper.eq("status", 1); // 只返回启用的产品
+        wrapper.orderByDesc("create_time");
+        List<FinancingProduct> products = financingProductMapper.selectList(wrapper);
         return Result.success("查询成功", products);
     }
 
