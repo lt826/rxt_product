@@ -37,13 +37,15 @@ async function handleLogout() {
 }
 
 function goBack() {
-  if (role.value === 'buyer') {
-    router.push('/buyer/dashboard')
-  } else if (role.value === 'farmer') {
-    router.push('/farmer/dashboard')
-  } else {
-    router.push('/login')
+  const dashboardMap = {
+    farmer: '/farmer/dashboard',
+    buyer: '/buyer/dashboard',
+    bank: '/bank/dashboard',
+    expert: '/expert/dashboard',
+    admin: '/admin/dashboard'
   }
+  const dashboard = dashboardMap[role.value] || '/farmer/dashboard'
+  router.push(dashboard)
 }
 </script>
 

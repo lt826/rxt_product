@@ -2,12 +2,26 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
+import { ArrowLeft } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 
 const role = computed(() => userStore.role)
 const nickName = computed(() => userStore.nickName || userStore.userInfo?.realName || userStore.userInfo?.userName || '用户')
+
+const roleDashboardMap = {
+  farmer: '/farmer/dashboard',
+  buyer: '/buyer/dashboard',
+  bank: '/bank/dashboard',
+  expert: '/expert/dashboard',
+  admin: '/admin/dashboard'
+}
+
+function goBack() {
+  const dashboard = roleDashboardMap[role.value] || '/farmer/dashboard'
+  router.push(dashboard)
+}
 
 const roleMenuLinks = {
   farmer: [
@@ -41,7 +55,13 @@ const menuLinks = computed(() => roleMenuLinks[role.value] || [])
 
 <template>
   <div>
-    <h2 class="page-title">个人中心</h2>
+    <div class="page-header">
+      <el-button text type="primary" @click="goBack" style="color:var(--green)">
+        <el-icon><ArrowLeft /></el-icon>
+        返回工作台
+      </el-button>
+      <h2 class="page-title">个人中心</h2>
+    </div>
     <el-card shadow="never" class="welcome-card">
       <div class="welcome-content">
         <div class="welcome-avatar">
@@ -81,7 +101,13 @@ const menuLinks = computed(() => roleMenuLinks[role.value] || [])
 </template>
 
 <style scoped>
-.page-title { font-size: 20px; margin-bottom: 16px; }
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.page-title { font-size: 20px; margin: 0; }
 .welcome-card { margin-bottom: 8px; }
 .welcome-content { display: flex; align-items: center; gap: 20px; }
 .quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }

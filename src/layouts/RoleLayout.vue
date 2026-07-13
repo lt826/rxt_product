@@ -13,6 +13,14 @@ const sidebarCollapsed = ref(false)
 const role = computed(() => route.meta.role)
 const roleTitle = computed(() => route.meta.title)
 
+const roleDashboardMap = {
+  farmer: '/farmer/dashboard',
+  buyer: '/buyer/dashboard',
+  bank: '/bank/dashboard',
+  expert: '/expert/dashboard',
+  admin: '/admin/dashboard'
+}
+
 const ROLE_MENU_MAP = {
   farmer: [
     { path: "/farmer/dashboard", label: "工作台", icon: "Odometer" },
@@ -63,7 +71,8 @@ function navigate(path) {
 }
 
 function goHome() {
-  router.push('/')
+  const dashboard = roleDashboardMap[role.value] || '/farmer/dashboard'
+  router.push(dashboard)
 }
 
 async function handleLogout() {
@@ -108,7 +117,7 @@ async function handleLogout() {
       </div>
 
       <div class="header-right">
-        <div class="user-pill" @click="router.push('/profile/center')" style="cursor:pointer">
+        <div class="user-pill" style="cursor:default">
           <span class="user-avatar-circle">{{ (userStore.nickName || userStore.userInfo?.userName || 'U')[0] }}</span>
           <span class="user-name">{{ userStore.nickName || userStore.userInfo?.roleName || '用户' }}</span>
           <el-dropdown trigger="click">

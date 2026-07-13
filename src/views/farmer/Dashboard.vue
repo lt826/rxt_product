@@ -79,7 +79,7 @@ onMounted(async () => {
         <h2 class="welcome-greeting">你好，{{ userName }} 👋</h2>
         <p class="welcome-sub">这是你的工作台，以下是最新动态</p>
       </div>
-      <el-button type="primary" @click="router.push('/trade/home')">进入交易市场 →</el-button>
+      <el-button type="primary" @click="router.push('/trade/home')">浏览市场 →</el-button>
     </div>
 
     <!-- Stats cards -->

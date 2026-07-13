@@ -3,12 +3,21 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { ElMessageBox } from 'element-plus'
+import { ArrowLeft } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
 const role = computed(() => userStore.role)
+
+const roleDashboardMap = {
+  farmer: '/farmer/dashboard',
+  buyer: '/buyer/dashboard',
+  bank: '/bank/dashboard',
+  expert: '/expert/dashboard',
+  admin: '/admin/dashboard'
+}
 
 const roleLabelMap = {
   farmer: '农户', buyer: '买家', bank: '银行工作人员', expert: '技术专家', admin: '平台管理员'
@@ -82,7 +91,8 @@ function navigate(path) {
 }
 
 function goToHome() {
-  router.push('/')
+  const dashboard = roleDashboardMap[role.value] || '/farmer/dashboard'
+  router.push(dashboard)
 }
 
 async function handleLogout() {
@@ -107,6 +117,10 @@ async function handleLogout() {
         </div>
         <el-divider direction="vertical" />
         <span class="header-title">个人中心</span>
+        <el-button text size="small" type="primary" @click="goToHome" style="color:var(--green)">
+          <el-icon><ArrowLeft /></el-icon>
+          返回工作台
+        </el-button>
       </div>
       <div class="header-right">
         <span class="role-badge">{{ roleLabelMap[role] || '用户' }}</span>
@@ -166,6 +180,7 @@ async function handleLogout() {
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-wrap: nowrap;
 }
 .logo-mark {
   display: flex;
