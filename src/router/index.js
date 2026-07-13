@@ -28,7 +28,8 @@ const routes = [
       { path: 'financing-intention', name: 'FarmerFinancingIntention', component: () => import('../views/farmer/FinancingIntention.vue'), meta: { title: '融资意向' } },
       { path: 'partner-invitations', name: 'FarmerPartnerInvitations', component: () => import('../views/farmer/PartnerInvitations.vue'), meta: { title: '联合贷款邀请' } },
       { path: 'smart-match', name: 'FarmerSmartMatch', component: () => import('../views/farmer/SmartMatch.vue'), meta: { title: '智能匹配' } },
-      { path: 'products', name: 'FarmerProducts', component: () => import('../views/farmer/Products.vue'), meta: { title: '商品浏览' } },
+      { path: 'products', name: 'FarmerProducts', component: () => import('../views/farmer/Products.vue'), meta: { title: '商品货源' } },
+      { path: 'demands', name: 'FarmerDemands', component: () => import('../views/farmer/Demands.vue'), meta: { title: '求购大厅' } },
       { path: 'knowledge', name: 'FarmerKnowledge', component: () => import('../views/farmer/Knowledge.vue'), meta: { title: '农业知识' } },
       { path: 'expert-qa', name: 'FarmerExpertQA', component: () => import('../views/farmer/ExpertQA.vue'), meta: { title: '专家问答' } },
       { path: 'appointments', name: 'FarmerAppointments', component: () => import('../views/farmer/Appointments.vue'), meta: { title: '专家预约' } },
@@ -43,7 +44,7 @@ const routes = [
     redirect: '/buyer/dashboard',
     children: [
       { path: 'dashboard', name: 'BuyerDashboard', component: () => import('../views/buyer/Dashboard.vue'), meta: { title: '工作台' } },
-      { path: 'products', name: 'BuyerProducts', component: () => import('../views/buyer/Products.vue'), meta: { title: '商品管理' } },
+      { path: 'products', name: 'BuyerProducts', component: () => import('../views/buyer/Products.vue'), meta: { title: '商品采购' } },
       { path: 'demand', name: 'BuyerDemand', component: () => import('../views/buyer/Demand.vue'), meta: { title: '收购需求' } },
       { path: 'contacts', name: 'BuyerContacts', component: () => import('../views/buyer/Contacts.vue'), meta: { title: '联系农户' } },
       { path: 'messages', name: 'BuyerMessages', component: () => import('../views/buyer/Messages.vue'), meta: { title: '买家消息' } }

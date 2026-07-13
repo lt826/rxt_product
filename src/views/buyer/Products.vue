@@ -1,143 +1,62 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getGoodsListAPI, publishGoodsAPI, deleteGoodsAPI } from '../../api/goods'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Delete, Search } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { getGoodsListAPI } from '../../api/goods'
 
-const products = ref([])
+const router = useRouter()
 const loading = ref(false)
-const dialogVisible = ref(false)
-const submitting = ref(false)
-const uploadingImage = ref(false)
+const keyword = ref('')
+const list = ref([])
 
-const form = ref({
-  title: '', price: null, content: '', type: '', address: '', picture: ''
-})
-
-const imageFile = ref(null)
-const imagePreview = ref('')
-const imageUrlInput = ref('')
-
-onMounted(async () => { await loadProducts() })
-
-async function loadProducts() {
+async function loadList() {
   loading.value = true
   try {
-    const res = await getGoodsListAPI()
-    if (res.code === 200) {
-      products.value = (res.data || []).map(g => ({
-        id: g.goodsId, title: g.title, price: g.price, content: g.content,
-        seller: g.ownName, type: g.type, address: g.address,
-        picture: g.picture, createTime: g.createTime
-      }))
+    const res = await getGoodsListAPI({ type: '1', keyword: keyword.value })
+    if (res && res.code === 200) {
+      list.value = res.data || []
+    } else {
+      list.value = []
     }
-  } catch {
+  } catch (e) {
+    console.error('获取商品列表失败:', e)
     ElMessage.error('获取商品列表失败')
+    list.value = []
   } finally {
     loading.value = false
   }
 }
 
-function handleImageChange(file) {
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
-  if (!allowedTypes.includes(file.raw.type)) {
-    ElMessage.warning('只支持上传 JPG、PNG、GIF、WEBP 格式的图片')
-    return false
-  }
-  if (file.raw.size > 5 * 1024 * 1024) {
-    ElMessage.warning('图片大小不能超过 5MB')
-    return false
-  }
-  imageFile.value = file.raw
-  uploadingImage.value = true
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    imagePreview.value = e.target.result
-    form.value.picture = e.target.result
-    uploadingImage.value = false
-  }
-  reader.onerror = () => {
-    ElMessage.error('图片读取失败')
-    uploadingImage.value = false
-  }
-  reader.readAsDataURL(file.raw)
-  return false
-}
-
-function removeImage() {
-  imageFile.value = null
-  imagePreview.value = ''
-  form.value.picture = ''
-  imageUrlInput.value = ''
-}
-
-function useImageUrl() {
-  if (imageUrlInput.value.trim()) {
-    form.value.picture = imageUrlInput.value.trim()
-    imagePreview.value = imageUrlInput.value.trim()
-    ElMessage.success('图片链接已设置')
-  }
-}
-
-function openPublishDialog() {
-  dialogVisible.value = true
-  form.value = { title: '', price: null, content: '', type: '', address: '', picture: '' }
-  imageFile.value = null
-  imagePreview.value = ''
-  imageUrlInput.value = ''
-}
-
-async function submitPublish() {
-  if (!form.value.title?.trim()) return ElMessage.warning('请输入商品名称')
-  if (!form.value.price || parseFloat(form.value.price) <= 0) return ElMessage.warning('请输入有效的价格')
-  if (!form.value.content?.trim()) return ElMessage.warning('请输入商品描述')
-  if (!form.value.type?.trim()) return ElMessage.warning('请输入商品类型')
-  if (!form.value.address?.trim()) return ElMessage.warning('请输入产地地址')
-
-  submitting.value = true
-  try {
-    const contentWithCategory = '【商品类型：' + form.value.type.trim() + '】\n' + form.value.content.trim()
-    const res = await publishGoodsAPI({
-      title: form.value.title.trim(), price: parseFloat(form.value.price),
-      content: contentWithCategory, type: '1', address: form.value.address.trim(),
-      picture: form.value.picture || ''
+function addToCart(item) {
+  const cart = JSON.parse(localStorage.getItem('rxt_cart') || '[]')
+  const existingIndex = cart.findIndex(c => c.id === item.goodsId)
+  if (existingIndex >= 0) {
+    cart[existingIndex].quantity += 1
+  } else {
+    cart.push({
+      id: item.goodsId,
+      title: item.title,
+      price: parseFloat(item.price) || 0,
+      quantity: 1,
+      seller: item.ownName,
+      address: item.address
     })
-    if (res.code === 200) {
-      ElMessage.success('商品发布成功！')
-      dialogVisible.value = false
-      await loadProducts()
-    } else {
-      ElMessage.error(res.message || '发布失败')
-    }
-  } catch {
-    ElMessage.error('发布失败，请重试')
-  } finally {
-    submitting.value = false
   }
+  localStorage.setItem('rxt_cart', JSON.stringify(cart))
+  ElMessage.success('已加入购物车：' + item.title)
 }
 
-async function deleteProduct(item) {
-  try {
-    await ElMessageBox.confirm('确定要删除商品"' + item.title + '"吗？', '提示', {
-      type: 'warning', confirmButtonText: '确定', cancelButtonText: '取消'
-    })
-    loading.value = true
-    const res = await deleteGoodsAPI(item.id)
-    if (res.code === 200) {
-      ElMessage.success('删除成功')
-      await loadProducts()
-    } else {
-      ElMessage.error(res.message || '删除失败')
-    }
-  } catch {
-    if (e !== 'cancel') ElMessage.error('删除失败')
-  } finally {
-    loading.value = false
-  }
+function goToCart() {
+  router.push('/trade/cart')
 }
 
-function viewDetail(item) {
-  ElMessage.info('查看详情：' + item.title)
+onMounted(() => { loadList() })
+
+function handleImageError(event) {
+  event.target.style.display = 'none'
+  if (event.target.nextElementSibling) {
+    event.target.nextElementSibling.style.display = 'flex'
+  }
 }
 </script>
 
@@ -145,100 +64,66 @@ function viewDetail(item) {
   <div class="products-page">
     <div class="page-head">
       <div>
-        <h2 class="page-title">商品货源</h2>
-        <p class="page-sub">管理你的商品，发布新的农产品</p>
+        <h2 class="page-title">商品采购</h2>
+        <p class="page-sub">浏览优质农产品，一键加入购物车</p>
       </div>
-      <el-button type="primary" @click="openPublishDialog" class="publish-btn">
-        <el-icon><Plus /></el-icon> 发布商品
-      </el-button>
+      <div class="head-actions">
+        <el-input
+          v-model="keyword"
+          placeholder="搜索商品名称..."
+          clearable
+          class="search-input"
+          @keyup.enter="loadList"
+          @clear="loadList"
+        >
+          <template #append>
+            <el-button @click="loadList"><el-icon><Search /></el-icon></el-button>
+          </template>
+        </el-input>
+        <el-button type="primary" @click="goToCart" class="cart-btn">
+          <el-icon><ShoppingCart /></el-icon>
+          购物车
+        </el-button>
+      </div>
     </div>
 
-    <div v-loading="loading">
-      <div class="goods-grid">
-        <div v-for="item in products" :key="item.id" class="goods-card">
-          <div class="goods-img">
-            <img v-if="item.picture && item.picture.startsWith('http')" :src="item.picture" :alt="item.title" />
-            <span v-else>📦</span>
+    <div v-loading="loading" class="goods-grid">
+      <div v-for="item in list" :key="item.goodsId" class="goods-card">
+        <div class="goods-img" @click="router.push('/trade/goods/' + item.goodsId)" style="cursor:pointer">
+          <img
+            v-if="item.picture && item.picture.startsWith('http')"
+            :src="item.picture"
+            :alt="item.title"
+            @error="handleImageError"
+          />
+          <span v-else>📦</span>
+        </div>
+        <div class="goods-info">
+          <div class="goods-title">{{ item.title }}</div>
+          <div class="goods-price-row">
+            <span class="price">¥{{ item.price }}</span>
+            <span class="goods-seller">{{ item.ownName }}</span>
           </div>
-          <div class="goods-info">
-            <div class="goods-title">{{ item.title }}</div>
-            <div class="goods-price-row">
-              <span class="price">¥{{ item.price }}</span>
-              <span class="goods-seller">{{ item.seller }}</span>
-            </div>
-            <div class="goods-tags">
-              <el-tag v-if="item.type" size="small" type="success" effect="plain">{{ item.type }}</el-tag>
-              <el-tag v-if="item.address" size="small" type="info" effect="plain">{{ item.address }}</el-tag>
-            </div>
-            <div class="goods-actions">
-              <el-button size="small" type="primary" plain @click="viewDetail(item)">查看</el-button>
-              <el-button size="small" type="danger" plain @click="deleteProduct(item)">删除</el-button>
-            </div>
+          <div class="goods-tags">
+            <el-tag v-if="item.type" size="small" type="success" effect="plain">{{ item.type }}</el-tag>
+            <el-tag v-if="item.address" size="small" type="info" effect="plain">{{ item.address }}</el-tag>
           </div>
+          <el-button type="primary" size="small" class="add-cart-btn" @click="addToCart(item)">
+            <el-icon><Plus /></el-icon> 加入购物车
+          </el-button>
         </div>
       </div>
-      <el-empty v-if="!loading && products.length === 0" description="暂无商品数据，点击上方按钮发布你的第一个商品">
-        <el-button type="primary" @click="openPublishDialog">立即发布</el-button>
-      </el-empty>
     </div>
-
-    <!-- Publish dialog -->
-    <el-dialog v-model="dialogVisible" title="发布农产品" width="550px" destroy-on-close>
-      <el-form :model="form" label-width="95px">
-        <el-form-item label="商品名称" required>
-          <el-input v-model="form.title" placeholder="如：有机红富士苹果" maxlength="50" show-word-limit />
-        </el-form-item>
-        <el-form-item label="价格" required>
-          <el-input-number v-model="form.price" :min="0" :precision="2" :step="0.5" controls-position="right" style="width:100%">
-            <template #suffix>元/斤</template>
-          </el-input-number>
-        </el-form-item>
-        <el-form-item label="商品类型" required>
-          <el-input v-model="form.type" placeholder="如：水果、蔬菜、粮食等" />
-        </el-form-item>
-        <el-form-item label="产地地址" required>
-          <el-input v-model="form.address" placeholder="如：山东省烟台市栖霞市" />
-        </el-form-item>
-        <el-form-item label="商品描述" required>
-          <el-input v-model="form.content" type="textarea" :rows="4" placeholder="品质特点、种植方式、供货量等" maxlength="300" show-word-limit />
-        </el-form-item>
-        <el-form-item label="商品图片">
-          <div class="image-upload-container">
-            <div v-if="imagePreview" class="image-preview">
-              <img :src="imagePreview" alt="预览" />
-              <div class="image-preview-actions">
-                <el-button type="danger" size="small" :icon="Delete" circle @click="removeImage" />
-              </div>
-            </div>
-            <el-upload v-else :show-file-list="false" :on-change="handleImageChange" :auto-upload="false"
-              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" class="image-uploader">
-              <div class="upload-trigger">
-                <el-icon :size="32"><Plus /></el-icon>
-                <div>点击上传图片</div>
-                <div class="upload-hint">JPG / PNG / GIF / WEBP，最大 5MB</div>
-              </div>
-            </el-upload>
-            <div v-if="!imagePreview" class="url-input-section">
-              <div class="url-divider">或使用图片链接</div>
-              <div class="url-input-row">
-                <el-input v-model="imageUrlInput" placeholder="请输入图片URL地址" clearable style="flex:1" />
-                <el-button type="primary" size="small" @click="useImageUrl">确定</el-button>
-              </div>
-            </div>
-          </div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitPublish">确认发布</el-button>
-      </template>
-    </el-dialog>
+    <el-empty v-if="!list.length && !loading" description="暂无农户供应商品">
+      <el-button type="primary" @click="router.push('/trade/home')">去商品大厅看看</el-button>
+    </el-empty>
   </div>
 </template>
 
 <style scoped>
-.products-page { max-width: 1200px; }
-
+.products-page {
+  max-width: 1200px;
+}
 .page-head {
   display: flex;
   justify-content: space-between;
@@ -247,9 +132,26 @@ function viewDetail(item) {
   flex-wrap: wrap;
   gap: 16px;
 }
-.page-title { font-size: 24px; font-weight: 800; color: var(--green-deep); margin: 0 0 4px; }
-.page-sub { font-size: 14px; color: var(--text-muted); margin: 0; }
-.publish-btn {
+.page-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--green-deep);
+  margin: 0 0 4px;
+}
+.page-sub {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0;
+}
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.search-input {
+  width: 300px;
+}
+.cart-btn {
   height: 40px;
   border-radius: var(--radius-sm);
   display: flex;
@@ -257,6 +159,7 @@ function viewDetail(item) {
   gap: 6px;
 }
 
+/* Grid */
 .goods-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -287,10 +190,16 @@ function viewDetail(item) {
   font-size: 48px;
   overflow: hidden;
 }
-.goods-img img { width: 100%; height: 100%; object-fit: cover; }
+.goods-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .goods-img span { display: none; }
 
-.goods-info { padding: 14px; }
+.goods-info {
+  padding: 14px;
+}
 .goods-title {
   font-size: 14px;
   font-weight: 500;
@@ -308,71 +217,24 @@ function viewDetail(item) {
   align-items: center;
   margin-bottom: 8px;
 }
-.price { color: var(--amber); font-size: 18px; font-weight: 700; }
-.goods-seller { font-size: 12px; color: var(--text-muted); }
-.goods-tags { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
-.goods-actions { display: flex; gap: 8px; }
-.goods-actions .el-button { flex: 1; }
-
-/* Image upload */
-.image-upload-container { width: 100%; }
-.image-uploader { width: 100%; }
-.upload-trigger {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 160px;
-  border: 2px dashed var(--border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all 0.3s;
-  background: var(--bg);
+.price {
+  color: var(--amber);
+  font-size: 18px;
+  font-weight: 700;
 }
-.upload-trigger:hover { border-color: var(--green); background: var(--green-mist); }
-.upload-trigger .el-icon { color: var(--text-muted); margin-bottom: 8px; }
-.upload-trigger > div { font-size: 14px; color: var(--text-secondary); }
-.upload-hint { font-size: 12px; color: var(--text-muted) !important; margin-top: 2px; }
-.image-preview {
-  position: relative;
-  width: 100%;
-  height: 200px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--bg);
-}
-.image-preview img { width: 100%; height: 100%; object-fit: contain; }
-.image-preview-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-}
-.url-input-section { margin-top: 16px; }
-.url-divider {
-  text-align: center;
+.goods-seller {
   font-size: 12px;
   color: var(--text-muted);
-  position: relative;
-  margin-bottom: 12px;
 }
-.url-divider::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 40%;
-  height: 1px;
-  background: var(--border);
+.goods-tags {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
 }
-.url-divider::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  right: 0;
-  width: 40%;
-  height: 1px;
-  background: var(--border);
+.add-cart-btn {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
 }
-.url-input-row { display: flex; gap: 8px; }
 </style>

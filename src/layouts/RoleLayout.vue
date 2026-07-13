@@ -19,6 +19,7 @@ const ROLE_MENU_MAP = {
   farmer: [
     { path: "/farmer/dashboard", label: "工作台", icon: "Odometer" },
     { path: "/farmer/products", label: "商品货源", icon: "Goods" },
+    { path: "/farmer/demands", label: "求购大厅", icon: "ShoppingCart" },
     { path: "/farmer/financing-intention", label: "融资意向", icon: "DocumentAdd" },
     { path: "/farmer/financing", label: "融资申请", icon: "Coin" },
     { path: "/farmer/partner-invitations", label: "联合贷款邀请", icon: "Connection" },

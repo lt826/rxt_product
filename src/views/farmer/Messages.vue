@@ -1,10 +1,12 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getConversationAPI, sendMessageAPI, getUnreadSummaryAPI, markAsReadAPI } from '../../api/message'
 import { getUserInfoAPI } from '../../api/user'
 import { useUserStore } from '../../stores/user'
 
+const route = useRoute()
 const userStore = useUserStore()
 const currentUserName = ref(userStore.userInfo?.userName || '')
 const conversations = ref([])
@@ -22,6 +24,9 @@ onMounted(() => {
   loadConversations()
   loadUnreadCount()
   pollTimer = setInterval(() => { loadConversations(); loadUnreadCount() }, 10000)
+  // 支持 ?to=xxx 直接打开与某用户的聊天（接取/去私聊跳转用）
+  const to = route.query.to
+  if (to) startChatWith(String(to))
 })
 onUnmounted(() => { clearPollTimer() })
 
@@ -50,6 +55,17 @@ async function loadConversations() {
       conversations.value = items
     }
   } catch { /* ignore */ }
+}
+
+async function startChatWith(userName) {
+  let partnerName = userName
+  try {
+    const res = await getUserInfoAPI(userName)
+    if (res && res.code === 200 && res.data) {
+      partnerName = res.data.realName || res.data.nickName || userName
+    }
+  } catch { /* ignore */ }
+  openChat({ sender: userName, partnerName })
 }
 
 function openChat(partner) {
