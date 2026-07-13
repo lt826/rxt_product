@@ -1,8 +1,10 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { ElMessageBox } from 'element-plus'
+import { Bell } from '@element-plus/icons-vue'
+import { getUnreadNotificationCountAPI, getMyNotificationsAPI, markNotificationReadAPI } from '../api/notification'
 
 const route = useRoute()
 const router = useRouter()
@@ -12,14 +14,6 @@ const sidebarCollapsed = ref(false)
 
 const role = computed(() => route.meta.role)
 const roleTitle = computed(() => route.meta.title)
-
-const roleDashboardMap = {
-  farmer: '/farmer/dashboard',
-  buyer: '/buyer/dashboard',
-  bank: '/bank/dashboard',
-  expert: '/expert/dashboard',
-  admin: '/admin/dashboard'
-}
 
 const ROLE_MENU_MAP = {
   farmer: [
@@ -71,8 +65,7 @@ function navigate(path) {
 }
 
 function goHome() {
-  const dashboard = roleDashboardMap[role.value] || '/farmer/dashboard'
-  router.push(dashboard)
+  router.push('/')
 }
 
 async function handleLogout() {
@@ -86,6 +79,51 @@ async function handleLogout() {
     router.push('/')
   } catch { }
 }
+
+// ===== 系统通知（审批结果等） =====
+const unreadCount = ref(0)
+const notifList = ref([])
+let notifTimer = null
+
+async function loadUnread() {
+  try {
+    const res = await getUnreadNotificationCountAPI()
+    if (res && res.code === 200 && res.data) {
+      unreadCount.value = Number(res.data.count || 0)
+    }
+  } catch { /* ignore */ }
+}
+
+async function loadNotifList() {
+  try {
+    const res = await getMyNotificationsAPI()
+    if (res && res.code === 200) {
+      notifList.value = (res.data || []).slice(0, 20)
+    }
+  } catch { /* ignore */ }
+}
+
+async function readNotif(n) {
+  if (n.isRead === 1) return
+  try {
+    await markNotificationReadAPI(n.id)
+    n.isRead = 1
+    unreadCount.value = Math.max(0, unreadCount.value - 1)
+  } catch { /* ignore */ }
+}
+
+function formatNotifTime(t) {
+  if (!t) return ''
+  return String(t).replace('T', ' ').substring(0, 16)
+}
+
+onMounted(() => {
+  loadUnread()
+  notifTimer = setInterval(loadUnread, 15000)
+})
+onUnmounted(() => {
+  if (notifTimer) clearInterval(notifTimer)
+})
 </script>
 
 <template>
@@ -117,7 +155,31 @@ async function handleLogout() {
       </div>
 
       <div class="header-right">
-        <div class="user-pill" style="cursor:default">
+        <el-popover placement="bottom-end" :width="360" trigger="click" @show="loadNotifList">
+          <template #reference>
+            <el-badge :value="unreadCount" :hidden="unreadCount === 0" :max="99" class="notif-badge">
+              <el-icon class="notif-bell"><Bell /></el-icon>
+            </el-badge>
+          </template>
+          <div class="notif-panel">
+            <div class="notif-head"><strong>系统通知</strong></div>
+            <div class="notif-list">
+              <div v-if="notifList.length === 0" class="notif-empty">暂无通知</div>
+              <div
+                v-for="n in notifList"
+                :key="n.id"
+                class="notif-item"
+                :class="{ unread: n.isRead === 0 }"
+                @click="readNotif(n)"
+              >
+                <div class="notif-title">{{ n.title }}</div>
+                <div class="notif-content">{{ n.content }}</div>
+                <div class="notif-time">{{ formatNotifTime(n.createTime) }}</div>
+              </div>
+            </div>
+          </div>
+        </el-popover>
+        <div class="user-pill" @click="router.push('/profile/center')" style="cursor:pointer">
           <span class="user-avatar-circle">{{ (userStore.nickName || userStore.userInfo?.userName || 'U')[0] }}</span>
           <span class="user-name">{{ userStore.nickName || userStore.userInfo?.roleName || '用户' }}</span>
           <el-dropdown trigger="click">
@@ -299,4 +361,29 @@ async function handleLogout() {
   .header-right { padding-right: 16px; }
   .user-name { display: none; }
 }
+
+/* ===== 通知铃铛 ===== */
+.notif-badge { margin-right: 18px; }
+.notif-bell {
+  font-size: 20px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.notif-bell:hover { color: var(--green); }
+.notif-panel { margin: -4px -8px; }
+.notif-head { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.notif-list { max-height: 360px; overflow-y: auto; }
+.notif-empty { padding: 32px 0; text-align: center; color: var(--text-muted); font-size: 13px; }
+.notif-item {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.notif-item:hover { background: var(--bg); }
+.notif-item.unread { background: var(--green-mist); }
+.notif-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.notif-content { font-size: 13px; color: var(--text-secondary); margin-top: 4px; white-space: pre-line; line-height: 1.5; }
+.notif-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 </style>
