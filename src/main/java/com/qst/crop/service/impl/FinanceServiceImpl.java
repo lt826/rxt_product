@@ -8,10 +8,13 @@ import com.qst.crop.dao.UserMapper;
 import com.qst.crop.entity.Finance;
 import com.qst.crop.entity.FinancingIntention;
 import com.qst.crop.entity.FinancingProduct;
+import com.qst.crop.entity.MatchRule;
 import com.qst.crop.entity.User;
 import com.qst.crop.model.FinanceApplyDTO;
+import com.qst.crop.model.FinanceApprovalVO;
 import com.qst.crop.model.RecommendPartnerVO;
 import com.qst.crop.service.FinanceService;
+import com.qst.crop.service.MatchRuleService;
 import com.qst.crop.service.NotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +23,11 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -40,6 +47,9 @@ public class FinanceServiceImpl implements FinanceService {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private MatchRuleService matchRuleService;
 
     // 最长还款期限（月），用于计算还款期限权重
     private static final int MAX_REPAYMENT_PERIOD = 36;
@@ -202,6 +212,117 @@ public class FinanceServiceImpl implements FinanceService {
     }
 
     @Override
+    public List<FinanceApprovalVO> getApprovalList() {
+        List<Finance> finances = getAllFinances();
+        List<FinanceApprovalVO> list = new ArrayList<>();
+        if (finances == null || finances.isEmpty()) {
+            return list;
+        }
+
+        // 批量查询申请人信誉分，避免 N+1
+        Set<String> userNames = new HashSet<>();
+        for (Finance f : finances) {
+            if (isNotBlank(f.getOwnName())) {
+                userNames.add(f.getOwnName());
+            }
+        }
+        Map<String, Integer> creditMap = new HashMap<>();
+        if (!userNames.isEmpty()) {
+            QueryWrapper<User> uw = new QueryWrapper<>();
+            uw.in("user_name", userNames);
+            List<User> users = userMapper.selectList(uw);
+            for (User u : users) {
+                creditMap.put(u.getUserName(), u.getCredit() != null ? u.getCredit() : 0);
+            }
+        }
+
+        MatchRule rule = matchRuleService.getRule();
+        for (Finance f : finances) {
+            FinanceApprovalVO vo = new FinanceApprovalVO();
+            vo.setFinanceId(f.getFinanceId());
+            vo.setRealName(f.getRealName());
+            vo.setOwnName(f.getOwnName());
+            vo.setMoney(f.getMoney());
+            vo.setRate(f.getRate());
+            vo.setRepayment(f.getRepayment());
+            vo.setStatus(f.getStatus());
+            vo.setRemark(f.getRemark());
+            vo.setCreateTime(f.getCreateTime());
+
+            // 联合贷款人姓名拼接与计数
+            List<String> coNames = new ArrayList<>();
+            if (isNotBlank(f.getCombinationName1())) coNames.add(f.getCombinationName1());
+            if (isNotBlank(f.getCombinationName2())) coNames.add(f.getCombinationName2());
+            vo.setCoLenderCount(coNames.size());
+            vo.setCoLenderNames(coNames.isEmpty() ? "—" : String.join("、", coNames));
+
+            Integer credit = creditMap.getOrDefault(f.getOwnName(), 0);
+            vo.setCredit(credit);
+            vo.setMatchScore(computeMatchScore(f, credit, rule));
+
+            list.add(vo);
+        }
+        return list;
+    }
+
+    /**
+     * 计算单笔融资申请的匹配度（0~100）：
+     * 联合子分×Wp + 信誉子分×Wc + 金额子分×Wa + 期限子分×Wt（四项权重之和=100）
+     */
+    private double computeMatchScore(Finance f, Integer credit, MatchRule rule) {
+        // 1. 联合贷款人子分：min(人数,2)/2 × 100（0人=0，1人=50，2人=100）
+        int count = 0;
+        if (isNotBlank(f.getCombinationName1())) count++;
+        if (isNotBlank(f.getCombinationName2())) count++;
+        double partnerSub = Math.min(count, 2) / 2.0 * 100.0;
+
+        // 2. 信誉子分：clamp(credit,0,100)
+        int c = credit != null ? credit : 0;
+        c = Math.max(0, Math.min(100, c));
+        double creditSub = c;
+
+        // 3. 金额子分：金额越低越高 (1 - min(money/上限,1)) × 100
+        BigDecimal upper = rule.getAmountUpperBound();
+        double upperVal = (upper != null && upper.doubleValue() > 0) ? upper.doubleValue() : 500000.0;
+        double money = f.getMoney() != null ? f.getMoney().doubleValue() : 0.0;
+        double amountRatio = Math.max(0.0, Math.min(money / upperVal, 1.0));
+        double amountSub = (1.0 - amountRatio) * 100.0;
+
+        // 4. 期限子分：越短越高 (1 - clamp((term-6)/(36-6),0,1)) × 100
+        int term = f.getRepayment() != null ? f.getRepayment() : 12;
+        int minP = 6;
+        int maxP = MAX_REPAYMENT_PERIOD; // 36
+        double termRatio;
+        if (term <= minP) {
+            termRatio = 0.0;
+        } else if (term >= maxP) {
+            termRatio = 1.0;
+        } else {
+            termRatio = ((double) (term - minP)) / ((double) (maxP - minP));
+        }
+        double termSub = (1.0 - termRatio) * 100.0;
+
+        double wp = num(rule.getPartnerWeight());
+        double wc = num(rule.getCreditWeight());
+        double wa = num(rule.getAmountWeight());
+        double wt = num(rule.getTermWeight());
+
+        double score = partnerSub * wp / 100.0
+                + creditSub * wc / 100.0
+                + amountSub * wa / 100.0
+                + termSub * wt / 100.0;
+        return Math.round(score * 10.0) / 10.0; // 保留1位小数
+    }
+
+    private double num(BigDecimal v) {
+        return v != null ? v.doubleValue() : 0.0;
+    }
+
+    private boolean isNotBlank(String s) {
+        return s != null && !s.trim().isEmpty();
+    }
+
+    @Override
     public boolean updateFinanceStatus(Integer financeId, Integer status, String remark) {
         Finance finance = financeMapper.selectById(financeId);
         if (finance == null) return false;
@@ -241,6 +362,47 @@ public class FinanceServiceImpl implements FinanceService {
         log.info("融资申请状态已更新并发送通知: financeId={}, status={}, receiver={}",
             financeId, status, finance.getOwnName());
 
+        // 同时把审批结果通知联合贷款人（按电话查找其用户账号后发送站内通知）
+        notifyCoLenders(finance, status == 1, remark);
+
         return true;
+    }
+
+    /**
+     * 通知该笔申请的联合贷款人（通过 combination_phone 查找其用户账号）
+     */
+    private void notifyCoLenders(Finance finance, boolean approved, String remark) {
+        String title = approved ? "您参与的联合融资申请已通过" : "您参与的联合融资申请已驳回";
+        String result = approved ? "已通过银行审核" : "已被银行驳回";
+        String tail = approved ? "" : ("驳回原因：" + (remark != null && !remark.trim().isEmpty() ? remark : "未填写"));
+        String content = String.format(
+                "您作为联合贷款人参与的融资申请（编号：%d，主申请人：%s）%s。%s",
+                finance.getFinanceId(),
+                finance.getRealName() != null ? finance.getRealName() : finance.getOwnName(),
+                result,
+                tail);
+        String type = approved ? "approve" : "reject";
+        notifyCoLenderByPhone(finance.getCombinationPhone1(), title, content, type, finance.getFinanceId(), finance.getOwnName());
+        notifyCoLenderByPhone(finance.getCombinationPhone2(), title, content, type, finance.getFinanceId(), finance.getOwnName());
+    }
+
+    private void notifyCoLenderByPhone(String phone, String title, String content, String type, Integer financeId, String excludeUserName) {
+        if (phone == null || phone.trim().isEmpty()) {
+            return;
+        }
+        QueryWrapper<User> uw = new QueryWrapper<>();
+        uw.eq("phone", phone);
+        uw.last("LIMIT 1");
+        User u = userMapper.selectOne(uw);
+        if (u == null) {
+            // 联合贷款人非系统注册用户，无法发送站内通知
+            return;
+        }
+        if (excludeUserName != null && excludeUserName.equals(u.getUserName())) {
+            // 与主申请人同一账号，避免重复通知
+            return;
+        }
+        notificationService.send(u.getUserName(), title, content, type, financeId);
+        log.info("联合贷款人通知已发送: financeId={}, coLender={}", financeId, u.getUserName());
     }
 }

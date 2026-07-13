@@ -6,6 +6,7 @@ import com.qst.crop.entity.Bank;
 import com.qst.crop.entity.Finance;
 import com.qst.crop.entity.FinancingProduct;
 import com.qst.crop.model.FinanceApplyDTO;
+import com.qst.crop.model.FinanceApprovalVO;
 import com.qst.crop.model.RecommendPartnerVO;
 import com.qst.crop.dao.BankMapper;
 import com.qst.crop.dao.FinancingProductMapper;
@@ -66,6 +67,14 @@ public class FinanceController {
     @GetMapping("/bank/list")
     public Result<List<Finance>> getAllFinances() {
         return Result.success("查询成功", financeService.getAllFinances());
+    }
+
+    /**
+     * 银行端融资审批列表（含联合贷款人、信誉分、匹配度）
+     */
+    @GetMapping("/bank/approval-list")
+    public Result<List<FinanceApprovalVO>> getApprovalList() {
+        return Result.success("查询成功", financeService.getApprovalList());
     }
 
     /**

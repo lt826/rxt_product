@@ -344,3 +344,14 @@ CREATE TABLE tb_notification (
     INDEX idx_receiver (receiver),
     INDEX idx_read (receiver, is_read)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='站内通知表';
+
+CREATE TABLE tb_match_rule (
+    id                 INT          NOT NULL AUTO_INCREMENT COMMENT 'id',
+    partner_weight     DECIMAL(5,2) NOT NULL DEFAULT 20.00  COMMENT '联合贷款人权重(%)',
+    credit_weight      DECIMAL(5,2) NOT NULL DEFAULT 30.00  COMMENT '信誉分权重(%)',
+    amount_weight      DECIMAL(5,2) NOT NULL DEFAULT 25.00  COMMENT '申请金额权重(%)',
+    term_weight        DECIMAL(5,2) NOT NULL DEFAULT 25.00  COMMENT '期限权重(%)',
+    amount_upper_bound DECIMAL(12,2) NOT NULL DEFAULT 500000.00 COMMENT '金额归一化上限',
+    update_time        DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='匹配规则权重配置表';

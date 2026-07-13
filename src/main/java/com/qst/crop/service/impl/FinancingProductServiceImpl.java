@@ -57,6 +57,7 @@ public class FinancingProductServiceImpl implements FinancingProductService {
         if (dto.getMaxTerm() != null) product.setMaxTerm(dto.getMaxTerm());
         if (dto.getDescription() != null) product.setDescription(dto.getDescription());
         if (dto.getContactPhone() != null) product.setContactPhone(dto.getContactPhone());
+        if (dto.getStatus() != null) product.setStatus(dto.getStatus());
         product.setUpdateTime(LocalDateTime.now());
         productMapper.updateById(product);
         return true;
