@@ -145,4 +145,24 @@ public class UserServiceImpl implements UserService {
         int result = userMapper.updateById(updateUser);
         return result > 0;
     }
+
+    @Override
+    public boolean changePassword(String userName, String oldPassword, String newPassword) {
+        User existingUser = userMapper.selectById(userName);
+        if (existingUser == null) {
+            return false;
+        }
+        // 校验原密码
+        if (!SecurityUtil.matchesPassword(oldPassword, existingUser.getPassword())) {
+            log.warn("修改密码失败：原密码不正确，用户 {}", userName);
+            return false;
+        }
+        // 加密新密码并更新（仅更新 password 与 updateTime）
+        User updateUser = new User();
+        updateUser.setUserName(userName);
+        updateUser.setPassword(SecurityUtil.encryptPassword(newPassword));
+        updateUser.setUpdateTime(LocalDateTime.now());
+        int result = userMapper.updateById(updateUser);
+        return result > 0;
+    }
 }

@@ -3,8 +3,10 @@ package com.qst.crop.controller;
 import com.qst.crop.common.Result;
 import com.qst.crop.entity.User;
 import com.qst.crop.exception.LoginException;
+import com.qst.crop.model.ChangePasswordDTO;
 import com.qst.crop.model.LoginDTO;
 import com.qst.crop.model.LoginVO;
+import com.qst.crop.security.SecurityUtil;
 import com.qst.crop.service.ExpertService;
 import com.qst.crop.service.UserService;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
@@ -77,6 +79,26 @@ public class UserController {
             return Result.success("更新成功", null);
         }
         return Result.error(400, "更新失败");
+    }
+
+    /**
+     * 修改密码：以 JWT 中的当前登录用户为准，仅可修改自己的密码
+     */
+    @PutMapping("/user/password")
+    public Result<String> changePassword(@RequestBody ChangePasswordDTO dto) {
+        String currentUserName = SecurityUtil.getCurrentUsername();
+        if (currentUserName == null) {
+            return Result.error(401, "未登录或登录已失效");
+        }
+        if (dto.getNewPassword() == null || dto.getNewPassword().length() < 6) {
+            return Result.error(400, "新密码长度不少于6位");
+        }
+        boolean success = userService.changePassword(
+                currentUserName, dto.getOldPassword(), dto.getNewPassword());
+        if (success) {
+            return Result.success("密码修改成功", null);
+        }
+        return Result.error(400, "原密码不正确");
     }
 
     /** 获取所有农户列表（用于买家联系） */
