@@ -126,3 +126,45 @@ export function getAllFinancesAPI() {
 export function updateFinanceStatusAPI(id, status, remark) {
   return request({ url: `/api/v1/finance/${id}/status`, method: 'put', data: { status, remark } })
 }
+
+// ====== 银行端·融资产品配置（tb_financing_product）CRUD ======
+// 查询全部融资产品
+export function getFinancingProductListAPI() {
+  return request({ url: '/api/v1/financing-product/list', method: 'get' })
+}
+
+// 新增融资产品
+export function createFinancingProductAPI(data) {
+  return request({ url: '/api/v1/financing-product/create', method: 'post', data })
+}
+
+// 修改融资产品
+export function updateFinancingProductAPI(id, data) {
+  return request({ url: `/api/v1/financing-product/${id}`, method: 'put', data })
+}
+
+// 删除融资产品
+export function deleteFinancingProductAPI(id) {
+  return request({ url: `/api/v1/financing-product/${id}`, method: 'delete' })
+}
+
+// 启用/停用融资产品（status: 1-启用 0-停用）
+export function updateFinancingProductStatusAPI(id, status) {
+  return request({ url: `/api/v1/financing-product/${id}/status`, method: 'put', data: status })
+}
+
+// ====== 银行端·融资审批匹配度 ======
+// 融资审批列表（含联合贷款人、信誉分、匹配度）
+export function getApprovalListAPI() {
+  return request({ url: '/api/v1/finance/bank/approval-list', method: 'get' })
+}
+
+// 获取匹配规则权重
+export function getMatchRuleAPI() {
+  return request({ url: '/api/v1/match-rule', method: 'get' })
+}
+
+// 保存匹配规则权重
+export function updateMatchRuleAPI(data) {
+  return request({ url: '/api/v1/match-rule', method: 'put', data })
+}

@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h2 class="page-title">融资审批</h2>
-        <p class="page-sub">审核农户融资申请</p>
+        <p class="page-sub">审核农户融资申请（含智能匹配度，辅助决策）</p>
       </div>
     </div>
 
@@ -14,20 +14,37 @@
           <el-button text size="small" @click="loadList">刷新</el-button>
         </div>
       </template>
-      <el-table :data="applications" stripe>
-        <el-table-column prop="financeId" label="编号" width="170" />
-        <el-table-column prop="ownName" label="农户" width="90" />
-        <el-table-column prop="money" label="申请金额" width="120" />
-        <el-table-column prop="repayment" label="期限" width="80" />
-        <el-table-column label="状态" width="100">
-          <template #default="{row}">
-            <el-tag :type="typeMap[row._status] || 'warning'" size="small">{{ row.status }}</el-tag>
+      <el-table :data="applications" stripe empty-text="暂无融资申请">
+        <el-table-column prop="financeId" label="编号" width="80" />
+        <el-table-column label="农户" min-width="100">
+          <template #default="{ row }">{{ row.realName || row.ownName || '-' }}</template>
+        </el-table-column>
+        <el-table-column prop="coLenderNames" label="联合贷款人" min-width="150" />
+        <el-table-column label="申请金额" width="140">
+          <template #default="{ row }">{{ formatMoney(row.money) }}</template>
+        </el-table-column>
+        <el-table-column label="期限" width="110">
+          <template #default="{ row }">{{ row.repayment != null ? row.repayment + ' 个月' : '-' }}</template>
+        </el-table-column>
+        <el-table-column label="匹配度" width="200">
+          <template #default="{ row }">
+            <el-progress
+              :percentage="Number(row.matchScore || 0)"
+              :color="scoreColor(row.matchScore)"
+              :stroke-width="14"
+              :text-inside="true"
+            />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160">
-          <template #default="{row}">
-            <el-button size="small" type="primary" :disabled="row._status !== 0" @click="approve(row)">通过</el-button>
-            <el-button size="small" type="danger" :disabled="row._status !== 0" @click="reject(row)">驳回</el-button>
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="typeMap[row.status] || 'warning'" size="small">{{ statusMap[row.status] || '待审批' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{ row }">
+            <el-button size="small" type="primary" :disabled="row.status !== 0" @click="approve(row)">通过</el-button>
+            <el-button size="small" type="danger" :disabled="row.status !== 0" @click="reject(row)">驳回</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -39,40 +56,75 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getAllFinancesAPI, updateFinanceStatusAPI } from '../../api/finance'
+import { getApprovalListAPI, updateFinanceStatusAPI } from '../../api/finance'
 
 const loading = ref(false)
 const applications = ref([])
+// 与后端 updateFinanceStatus 自洽：0 待审批 / 1 已通过 / 2 已驳回
 const statusMap = { 0: '待审批', 1: '已通过', 2: '已驳回' }
 const typeMap = { 0: 'warning', 1: 'success', 2: 'danger' }
+
+function scoreColor(score) {
+  const s = Number(score || 0)
+  if (s > 60) return '#67c23a' // 绿：>60
+  if (s >= 40) return '#e6a23c' // 橙：40~60
+  return '#f56c6c' // 红：<40
+}
+
+function formatMoney(money) {
+  if (money == null || money === '') return '-'
+  return '¥' + Number(money).toLocaleString()
+}
 
 async function loadList() {
   loading.value = true
   try {
-    const res = await getAllFinancesAPI()
+    const res = await getApprovalListAPI()
     if (res.code === 200) {
-      applications.value = (res.data || []).map(f => ({
-        financeId: f.financeId, ownName: f.ownName || '-', money: f.money ? '¥' + f.money : '-',
-        repayment: (f.repayment || '-') + '月', status: statusMap[f.status] || '待审批', _status: f.status
-      }))
+      applications.value = res.data || []
+    } else {
+      ElMessage.error(res.message || '获取列表失败')
     }
-  } catch { ElMessage.error('获取列表失败') } finally { loading.value = false }
+  } catch (e) {
+    /* 错误已由 axios 拦截器统一提示 */
+  } finally {
+    loading.value = false
+  }
 }
 
 async function approve(row) {
   try {
     await ElMessageBox.confirm('确认通过该融资申请？', '提示')
+  } catch {
+    return // 用户取消
+  }
+  try {
     await updateFinanceStatusAPI(row.financeId, 1, '审核通过')
-    ElMessage.success('已通过'); loadList()
-  } catch { /* cancelled */ }
+    ElMessage.success('已通过')
+    loadList()
+  } catch (e) {
+    /* 错误已由 axios 拦截器统一提示 */
+  }
 }
 
 async function reject(row) {
+  let value = ''
   try {
-    const { value } = await ElMessageBox.prompt('请输入驳回原因', '驳回申请', { confirmButtonText: '驳回', cancelButtonText: '取消' })
+    const { value: v } = await ElMessageBox.prompt('请输入驳回原因', '驳回申请', {
+      confirmButtonText: '驳回',
+      cancelButtonText: '取消'
+    })
+    value = v
+  } catch {
+    return // 用户取消
+  }
+  try {
     await updateFinanceStatusAPI(row.financeId, 2, value || '审核不通过')
-    ElMessage.success('已驳回'); loadList()
-  } catch { /* cancelled */ }
+    ElMessage.success('已驳回')
+    loadList()
+  } catch (e) {
+    /* 错误已由 axios 拦截器统一提示 */
+  }
 }
 
 onMounted(loadList)
