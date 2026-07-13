@@ -3,65 +3,127 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
 import { ElMessageBox } from 'element-plus'
-import { Bell } from '@element-plus/icons-vue'
+import { Bell, ArrowDown } from '@element-plus/icons-vue'
 import { getUnreadNotificationCountAPI, getMyNotificationsAPI, markNotificationReadAPI } from '../api/notification'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-const sidebarCollapsed = ref(false)
+const headerNavRef = ref(null)
+const activeDropdown = ref(null)
 
-const role = computed(() => route.meta.role)
-const roleTitle = computed(() => route.meta.title)
+// 点导航栏以外关闭下拉
+function handleClickOutside(e) {
+  if (headerNavRef.value && !headerNavRef.value.contains(e.target)) {
+    activeDropdown.value = null
+  }
+}
+
+// 角色端路由带 meta.role；个人中心 /profile 路由不带，回退到当前登录用户角色
+const role = computed(() => route.meta.role || userStore.role)
+
+const ROLE_TITLE = {
+  farmer: '农户端', buyer: '买家端', bank: '银行端', expert: '专家端', admin: '平台管理端'
+}
+const roleTitle = computed(() => ROLE_TITLE[role.value] || '个人中心')
 
 const ROLE_MENU_MAP = {
   farmer: [
-    { path: "/farmer/dashboard", label: "工作台", icon: "Odometer" },
-    { path: "/farmer/products", label: "商品货源", icon: "Goods" },
-    { path: "/farmer/demands", label: "求购大厅", icon: "ShoppingCart" },
-    { path: "/farmer/financing-intention", label: "融资意向", icon: "DocumentAdd" },
-    { path: "/farmer/financing", label: "融资申请", icon: "Coin" },
-    { path: "/farmer/partner-invitations", label: "联合贷款邀请", icon: "Connection" },
-    { path: "/farmer/expert-qa", label: "专家问答", icon: "ChatDotRound" },
-    { path: "/farmer/appointments", label: "专家预约", icon: "Calendar" },
-    { path: "/farmer/knowledge", label: "农业知识", icon: "Reading" },
+    { path: "/farmer/dashboard", label: "首页", icon: "HomeFilled", isRoot: true },
+    {
+      label: "融资服务", icon: "Wallet", isRoot: true,
+      children: [
+        { path: "/farmer/financing-intention", label: "融资意向", icon: "DocumentAdd" },
+        { path: "/farmer/financing", label: "融资申请", icon: "Coin" },
+        { path: "/farmer/partner-invitations", label: "联合贷款申请", icon: "Connection" }
+      ]
+    },
+    {
+      label: "专家助力", icon: "Service", isRoot: true,
+      children: [
+        { path: "/farmer/knowledge", label: "农业知识", icon: "Reading" },
+        { path: "/farmer/expert-qa", label: "专家问答", icon: "ChatDotRound" },
+        { path: "/farmer/appointments", label: "专家预约", icon: "Calendar" }
+      ]
+    },
+    {
+      label: "农产品交易", icon: "ShoppingBasket", isRoot: true,
+      children: [
+        { path: "/farmer/products", label: "商品货源", icon: "Goods" },
+        { path: "/farmer/demands", label: "求购大厅", icon: "ShoppingCart" }
+      ]
+    },
     { path: "/farmer/messages", label: "消息通知", icon: "Bell" }
   ],
   buyer: [
-    { path: '/buyer/dashboard', label: '工作台', icon: 'Odometer' },
+    { path: '/buyer/dashboard', label: '首页', icon: 'HomeFilled' },
     { path: '/buyer/products', label: '商品采购', icon: 'ShoppingBag' },
     { path: '/buyer/demand', label: '收购需求', icon: 'Document' },
-    { path: '/buyer/contacts', label: '联系农户', icon: 'User' },
-    { path: '/buyer/messages', label: '买家消息', icon: 'Bell' }
+    { path: '/buyer/contacts', label: '联系农户', icon: 'User' }
   ],
   bank: [
-    { path: '/bank/dashboard', label: '工作台', icon: 'Odometer' },
+    { path: '/bank/dashboard', label: '首页', icon: 'HomeFilled' },
     { path: '/bank/approvals', label: '融资审批', icon: 'DocumentChecked' },
     { path: '/bank/products', label: '产品配置', icon: 'Setting' },
     { path: '/bank/match-rules', label: '匹配规则', icon: 'Connection' }
   ],
   expert: [
-    { path: '/expert/dashboard', label: '工作台', icon: 'Odometer' },
+    { path: '/expert/dashboard', label: '首页', icon: 'HomeFilled' },
     { path: '/expert/knowledge', label: '知识管理', icon: 'Reading' },
     { path: '/expert/qa', label: '问答处理', icon: 'ChatDotSquare' },
     { path: '/expert/appointments', label: '预约处理', icon: 'Calendar' }
   ],
   admin: [
-    { path: '/admin/dashboard', label: '工作台', icon: 'Odometer' },
+    { path: '/admin/dashboard', label: '首页', icon: 'HomeFilled' },
     { path: '/admin/users', label: '用户管理', icon: 'UserFilled' },
     { path: '/admin/config', label: '系统配置', icon: 'Setting' },
     { path: '/admin/stats', label: '数据统计', icon: 'DataAnalysis' }
   ]
 }
 
-const menuItems = computed(() => ROLE_MENU_MAP[role.value] || [])
+// 所有角色端统一在导航栏末尾追加「个人中心」入口
+const profileTab = { path: '/profile/center', label: '个人信息', icon: 'User', isProfile: true }
+
+// 过滤掉子菜单项，只保留顶级菜单
+const topLevelItems = computed(() => (menuItems.value || []).filter(item => !item._hidden))
+const menuItems = computed(() => {
+  const base = ROLE_MENU_MAP[role.value] || []
+  // 为子菜单项标记 _hidden，使其不显示为主 tab，但通过父级下拉访问
+  const withHiddenFlag = base.flatMap(item => {
+    if (item.children) {
+      return [item, ...item.children.map(c => ({ ...c, _hidden: true }))]
+    }
+    return item
+  })
+  return [...withHiddenFlag, profileTab]
+})
 
 function isActive(path) {
   return route.path === path || route.path.startsWith(path + '/')
 }
 
+function isTabActive(item) {
+  // 个人中心 tab 在任意 /profile/* 页面下都高亮
+  if (item.isProfile) return route.path.startsWith('/profile')
+  // 带子菜单的父项：任意子项激活时父项也高亮
+  if (item.children) {
+    return item.children.some(c => isActive(c.path)) || isActive(item.path)
+  }
+  return isActive(item.path)
+}
+
+function toggleDropdown(item) {
+  if (!item.children) return
+  activeDropdown.value = activeDropdown.value === item.label ? null : item.label
+}
+
+function closeDropdown() {
+  activeDropdown.value = null
+}
+
 function navigate(path) {
+  closeDropdown()
   router.push(path)
 }
 
@@ -121,9 +183,11 @@ function formatNotifTime(t) {
 onMounted(() => {
   loadUnread()
   notifTimer = setInterval(loadUnread, 15000)
+  document.addEventListener('click', handleClickOutside)
 })
 onUnmounted(() => {
   if (notifTimer) clearInterval(notifTimer)
+  document.removeEventListener('click', handleClickOutside)
 })
 </script>
 
@@ -141,16 +205,32 @@ onUnmounted(() => {
       </div>
 
       <div class="header-center">
-        <nav class="header-nav">
+        <nav ref="headerNavRef" class="header-nav">
           <div
-            v-for="item in menuItems"
-            :key="item.path"
+            v-for="item in topLevelItems"
+            :key="item.path || item.label"
             class="nav-tab"
-            :class="{ active: isActive(item.path) }"
-            @click="navigate(item.path)"
+            :class="{ active: isTabActive(item) }"
+            @click="!item.children ? navigate(item.path) : toggleDropdown(item)"
           >
             <el-icon><component :is="item.icon" /></el-icon>
             <span>{{ item.label }}</span>
+            <el-icon v-if="item.children" class="dropdown-arrow"><ArrowDown /></el-icon>
+            <!-- Dropdown submenu -->
+            <transition name="dropdown">
+              <div v-if="item.children && activeDropdown === item.label" class="nav-dropdown" @click.stop>
+                <div
+                  v-for="child in item.children"
+                  :key="child.path"
+                  class="dropdown-item"
+                  :class="{ active: isActive(child.path) }"
+                  @click="navigate(child.path)"
+                >
+                  <el-icon><component :is="child.icon" /></el-icon>
+                  <span>{{ child.label }}</span>
+                </div>
+              </div>
+            </transition>
           </div>
         </nav>
       </div>
@@ -183,18 +263,11 @@ onUnmounted(() => {
         <div class="user-pill" @click="router.push('/profile/center')" style="cursor:pointer">
           <span class="user-avatar-circle">{{ (userStore.nickName || userStore.userInfo?.userName || 'U')[0] }}</span>
           <span class="user-name">{{ userStore.nickName || userStore.userInfo?.roleName || '用户' }}</span>
-          <el-dropdown trigger="click">
-            <span class="dropdown-trigger">
-              <el-icon><ArrowDown /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item @click="router.push('/profile/center')">个人中心</el-dropdown-item>
-                <el-dropdown-item divided @click="handleLogout">退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
         </div>
+        <el-button text size="small" class="logout-btn" @click="handleLogout">
+          <el-icon><SwitchButton /></el-icon>
+          <span>退出</span>
+        </el-button>
       </div>
     </header>
 
@@ -263,7 +336,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   padding: 0 24px;
-  overflow-x: auto;
+  overflow: visible;
 }
 .header-nav {
   display: flex;
@@ -273,6 +346,7 @@ onUnmounted(() => {
   border-radius: var(--radius-md);
 }
 .nav-tab {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -298,6 +372,71 @@ onUnmounted(() => {
 }
 .nav-tab .el-icon {
   font-size: 16px;
+}
+.dropdown-arrow {
+  font-size: 12px;
+  margin-left: 2px;
+  transition: transform 0.2s;
+}
+.nav-tab:hover .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+/* Dropdown submenu */
+.nav-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(27,67,50,0.12);
+  padding: 6px;
+  min-width: 160px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.dropdown-item:hover {
+  color: var(--green);
+  background: var(--green-mist);
+}
+.dropdown-item.active {
+  color: var(--green);
+  background: var(--green-mist);
+  font-weight: 600;
+}
+.dropdown-item .el-icon {
+  font-size: 15px;
+}
+
+/* Dropdown transition */
+.dropdown-enter-active,
+.dropdown-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.dropdown-enter-from {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-6px);
+}
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-6px);
 }
 
 /* Right side */
@@ -336,14 +475,15 @@ onUnmounted(() => {
   color: var(--text-secondary);
   font-weight: 500;
 }
-.dropdown-trigger {
+.logout-btn {
   color: var(--text-muted);
   display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
   transition: color 0.2s;
 }
-.dropdown-trigger:hover {
-  color: var(--green);
-}
+.logout-btn:hover { color: var(--green); }
 
 /* ===== Main ===== */
 .app-main {

@@ -15,7 +15,8 @@ const role = computed(() => userStore.role)
 const navItems = [
   { path: '/trade/home', label: '商品大厅', icon: 'Shop' },
   { path: '/trade/cart', label: '购物车', icon: 'ShoppingCart' },
-  { path: '/trade/checkout', label: '订单结算', icon: 'Document' }
+  { path: '/trade/checkout', label: '订单结算', icon: 'Document' },
+  { path: '/profile/center', label: '个人中心', icon: 'User', isProfile: true }
 ]
 
 function navigate(path) {
@@ -24,6 +25,12 @@ function navigate(path) {
     return
   }
   router.push(path)
+}
+
+function isItemActive(item) {
+  // 个人中心入口在任意 /profile/* 页面下都高亮
+  if (item.isProfile) return route.path.startsWith('/profile')
+  return route.path.startsWith(item.path)
 }
 
 async function handleLogout() {
@@ -66,7 +73,7 @@ function goBack() {
             v-for="item in navItems"
             :key="item.path"
             class="nav-item"
-            :class="{ active: route.path.startsWith(item.path) }"
+            :class="{ active: isItemActive(item) }"
             @click="navigate(item.path)"
           >
             <el-icon><component :is="item.icon" /></el-icon>
@@ -79,7 +86,10 @@ function goBack() {
             <span class="user-avatar-circle">{{ (nickName || 'U')[0] }}</span>
             <span class="user-name">{{ nickName }}</span>
           </div>
-          <el-button text size="small" @click="handleLogout" style="color:var(--text-muted)">退出</el-button>
+          <el-button text size="small" class="logout-btn" @click="handleLogout">
+            <el-icon><SwitchButton /></el-icon>
+            <span>退出</span>
+          </el-button>
         </div>
       </div>
     </header>
@@ -197,6 +207,14 @@ function goBack() {
   color: var(--text-secondary);
   font-weight: 500;
 }
+.logout-btn {
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s;
+}
+.logout-btn:hover { color: var(--green); }
 
 /* Main */
 .platform-main {

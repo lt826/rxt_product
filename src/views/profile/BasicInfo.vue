@@ -1,37 +1,68 @@
-﻿<script setup>
+<script setup>
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '../../stores/user'
+import { getUserInfoAPI, updateUserInfoAPI } from '../../api/user'
 import { ElMessage } from 'element-plus'
 
 const userStore = useUserStore()
 
 const form = ref({
   userName: userStore.userInfo?.userName || '',
-  nickName: userStore.userInfo?.nickName || '',
-  realName: userStore.userInfo?.realName || '',
-  phone: userStore.userInfo?.phone || '',
-  identityNum: userStore.userInfo?.identityNum || '',
-  address: userStore.userInfo?.address || ''
+  nickName: '',
+  realName: '',
+  phone: '',
+  identityNum: '',
+  address: ''
 })
 
 const loading = ref(false)
+const saving = ref(false)
 
-async function saveInfo() {
+// 拉取数据库中的真实资料回填（登录返回的 LoginVO 不含 realName/phone/address/identityNum）
+async function loadInfo() {
+  const userName = userStore.userInfo?.userName
+  if (!userName) return
   loading.value = true
   try {
-    // 更新本地存储
-    const user = JSON.parse(localStorage.getItem('rxt_user') || '{}')
-    Object.assign(user, form.value)
-    localStorage.setItem('rxt_user', JSON.stringify(user))
-    userStore.userInfo = user
-    ElMessage.success('保存成功')
-  } catch(e) { ElMessage.error('保存失败') }
+    const res = await getUserInfoAPI(userName)
+    if (res && res.code === 200 && res.data) {
+      const u = res.data
+      form.value = {
+        userName: u.userName || userName,
+        nickName: u.nickName || '',
+        realName: u.realName || '',
+        phone: u.phone || '',
+        identityNum: u.identityNum || '',
+        address: u.address || ''
+      }
+    }
+  } catch (e) { /* 拦截器已提示 */ }
   finally { loading.value = false }
+}
+onMounted(loadInfo)
+
+async function saveInfo() {
+  if (!form.value.userName) return ElMessage.warning('缺少用户名')
+  saving.value = true
+  try {
+    const res = await updateUserInfoAPI({ ...form.value })
+    if (res && res.code === 200) {
+      // 同步本地登录态中的昵称（顶部导航栏展示用）
+      const user = JSON.parse(localStorage.getItem('rxt_user') || '{}')
+      if (form.value.nickName) user.nickName = form.value.nickName
+      localStorage.setItem('rxt_user', JSON.stringify(user))
+      userStore.userInfo = { ...userStore.userInfo, ...user }
+      ElMessage.success(res.message || '保存成功')
+    } else {
+      ElMessage.error(res?.message || '保存失败')
+    }
+  } catch (e) { /* 拦截器已提示 */ }
+  finally { saving.value = false }
 }
 </script>
 
 <template>
-  <div>
+  <div v-loading="loading">
     <h2 class="page-title">基本信息管理</h2>
     <el-card shadow="never">
       <el-form :model="form" label-width="100px">
@@ -54,7 +85,7 @@ async function saveInfo() {
           <el-input v-model="form.address" placeholder="请输入地址" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="loading" @click="saveInfo">保存信息</el-button>
+          <el-button type="primary" :loading="saving" @click="saveInfo">保存信息</el-button>
         </el-form-item>
       </el-form>
     </el-card>

@@ -45,7 +45,7 @@ async function loadDashboard() {
       }))
     }
   } catch (e) {
-    console.error('加载工作台数据失败:', e)
+    console.error('加载首页数据失败:', e)
   } finally {
     loading.value = false
   }
@@ -59,7 +59,7 @@ onMounted(loadDashboard)
     <!-- Welcome -->
     <div class="dash-welcome">
       <div>
-        <h2 class="welcome-greeting">买家工作台 👋</h2>
+        <h2 class="welcome-greeting">买家首页 👋</h2>
         <p class="welcome-sub">你好，{{ userName }}，以下是你的业务概览</p>
       </div>
       <div style="display:flex;gap:8px">

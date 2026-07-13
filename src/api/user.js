@@ -18,6 +18,15 @@ export function updateUserInfoAPI(data) {
   })
 }
 
+// 修改密码
+export function changePasswordAPI(data) {
+  return request({
+    url: '/api/v1/user/password',
+    method: 'put',
+    data
+  })
+}
+
 // 获取所有农户列表（买家端用）
 export function getFarmersAPI() {
   return request({

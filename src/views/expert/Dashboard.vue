@@ -54,7 +54,7 @@ onMounted(async () => {
   <div class="dashboard">
     <div class="dash-welcome">
       <div>
-        <h2 class="welcome-greeting">专家工作台 👨‍🔬</h2>
+        <h2 class="welcome-greeting">专家首页 👨‍🔬</h2>
         <p class="welcome-sub">管理你的问答和预约</p>
       </div>
       <el-button type="primary" @click="router.push('/expert/qa')">处理问答 →</el-button>

@@ -23,7 +23,7 @@ const routes = [
     meta: { role: 'farmer', title: '农户端', requiresAuth: true },
     redirect: '/farmer/dashboard',
     children: [
-      { path: 'dashboard', name: 'FarmerDashboard', component: () => import('../views/farmer/Dashboard.vue'), meta: { title: '工作台' } },
+      { path: 'dashboard', name: 'FarmerDashboard', component: () => import('../views/farmer/Dashboard.vue'), meta: { title: '首页' } },
       { path: 'financing', name: 'FarmerFinancing', component: () => import('../views/farmer/Financing.vue'), meta: { title: '融资申请' } },
       { path: 'financing-intention', name: 'FarmerFinancingIntention', component: () => import('../views/farmer/FinancingIntention.vue'), meta: { title: '融资意向' } },
       { path: 'partner-invitations', name: 'FarmerPartnerInvitations', component: () => import('../views/farmer/PartnerInvitations.vue'), meta: { title: '联合贷款邀请' } },
@@ -43,7 +43,7 @@ const routes = [
     meta: { role: 'buyer', title: '买家端', requiresAuth: true },
     redirect: '/buyer/dashboard',
     children: [
-      { path: 'dashboard', name: 'BuyerDashboard', component: () => import('../views/buyer/Dashboard.vue'), meta: { title: '工作台' } },
+      { path: 'dashboard', name: 'BuyerDashboard', component: () => import('../views/buyer/Dashboard.vue'), meta: { title: '首页' } },
       { path: 'products', name: 'BuyerProducts', component: () => import('../views/buyer/Products.vue'), meta: { title: '商品采购' } },
       { path: 'demand', name: 'BuyerDemand', component: () => import('../views/buyer/Demand.vue'), meta: { title: '收购需求' } },
       { path: 'contacts', name: 'BuyerContacts', component: () => import('../views/buyer/Contacts.vue'), meta: { title: '联系农户' } },
@@ -57,7 +57,7 @@ const routes = [
     meta: { role: 'bank', title: '银行端', requiresAuth: true },
     redirect: '/bank/dashboard',
     children: [
-      { path: 'dashboard', name: 'BankDashboard', component: () => import('../views/bank/Dashboard.vue'), meta: { title: '工作台' } },
+      { path: 'dashboard', name: 'BankDashboard', component: () => import('../views/bank/Dashboard.vue'), meta: { title: '首页' } },
       { path: 'approvals', name: 'BankApprovals', component: () => import('../views/bank/Approvals.vue'), meta: { title: '融资审批' } },
       { path: 'products', name: 'BankProducts', component: () => import('../views/bank/Products.vue'), meta: { title: '融资产品配置' } },
       { path: 'match-rules', name: 'BankMatchRules', component: () => import('../views/bank/MatchRules.vue'), meta: { title: '智能匹配规则' } }
@@ -70,7 +70,7 @@ const routes = [
     meta: { role: 'expert', title: '专家端', requiresAuth: true },
     redirect: '/expert/dashboard',
     children: [
-      { path: 'dashboard', name: 'ExpertDashboard', component: () => import('../views/expert/Dashboard.vue'), meta: { title: '工作台' } },
+      { path: 'dashboard', name: 'ExpertDashboard', component: () => import('../views/expert/Dashboard.vue'), meta: { title: '首页' } },
       { path: 'knowledge', name: 'ExpertKnowledge', component: () => import('../views/expert/Knowledge.vue'), meta: { title: '知识管理' } },
       { path: 'qa', name: 'ExpertQA', component: () => import('../views/expert/QA.vue'), meta: { title: '问答处理' } },
       { path: 'appointments', name: 'ExpertAppointments', component: () => import('../views/expert/Appointments.vue'), meta: { title: '预约处理' } }
@@ -83,20 +83,25 @@ const routes = [
     meta: { role: 'admin', title: '平台管理端', requiresAuth: true },
     redirect: '/admin/dashboard',
     children: [
-      { path: 'dashboard', name: 'AdminDashboard', component: () => import('../views/admin/Dashboard.vue'), meta: { title: '工作台' } },
+      { path: 'dashboard', name: 'AdminDashboard', component: () => import('../views/admin/Dashboard.vue'), meta: { title: '首页' } },
       { path: 'users', name: 'AdminUsers', component: () => import('../views/admin/Users.vue'), meta: { title: '用户管理' } },
       { path: 'config', name: 'AdminConfig', component: () => import('../views/admin/Config.vue'), meta: { title: '系统配置' } },
       { path: 'stats', name: 'AdminStats', component: () => import('../views/admin/Stats.vue'), meta: { title: '数据统计' } }
     ]
   },
-  // 个人中心 Profile
+  // 个人中心 Profile —— 嵌在各角色端的 RoleLayout 内，顶部导航栏始终可见
   {
     path: '/profile',
-    component: () => import('../layouts/ProfileLayout.vue'),
+    component: () => import('../layouts/RoleLayout.vue'),
     meta: { title: '个人中心', requiresAuth: true },
     redirect: '/profile/center',
     children: [
-      { path: 'center', name: 'ProfileCenter', component: () => import('../views/profile/Center.vue'), meta: { title: '个人中心' } },
+      {
+        // 只保留侧栏 + 内容区，顶栏由 RoleLayout 提供
+        path: '',
+        component: () => import('../layouts/ProfileLayout.vue'),
+        children: [
+          { path: 'center', name: 'ProfileCenter', component: () => import('../views/profile/Center.vue'), meta: { title: '个人中心' } },
       { path: 'basic', name: 'ProfileBasic', component: () => import('../views/profile/BasicInfo.vue'), meta: { title: '基本信息' } },
       { path: 'address', name: 'ProfileAddress', component: () => import('../views/profile/Address.vue'), meta: { title: '收货地址' } },
       { path: 'password', name: 'ProfilePassword', component: () => import('../views/profile/Password.vue'), meta: { title: '密码管理' } },
@@ -112,7 +117,9 @@ const routes = [
       { path: 'bank/match', name: 'ProfileBankMatch', component: () => import('../views/profile/BankMatch.vue'), meta: { title: '智能匹配' } },
       { path: 'bank/approval', name: 'ProfileBankApproval', component: () => import('../views/profile/BankApproval.vue'), meta: { title: '贷款审批' } },
       { path: 'all-users', name: 'ProfileAllUsers', component: () => import('../views/profile/AllUsers.vue'), meta: { title: '用户管理' } },
-      { path: 'all-goods', name: 'ProfileAllGoods', component: () => import('../views/profile/AllGoods.vue'), meta: { title: '商品管理' } }
+          { path: 'all-goods', name: 'ProfileAllGoods', component: () => import('../views/profile/AllGoods.vue'), meta: { title: '商品管理' } }
+        ]
+      }
     ]
   },
   // 交易平台 Trade (购物车、结算)
