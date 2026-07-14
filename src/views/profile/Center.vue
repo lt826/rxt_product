@@ -72,10 +72,7 @@ const roleMenuLinks = {
   bank: [
     { label: '贷款审批', path: '/profile/bank/approval', icon: '✅' }
   ],
-  admin: [
-    { label: '所有用户管理', path: '/profile/all-users', icon: '👥' },
-    { label: '所有商品管理', path: '/profile/all-goods', icon: '📦' }
-  ]
+  admin: []
 }
 
 const menuLinks = computed(() => roleMenuLinks[role.value] || [])
@@ -134,13 +131,15 @@ function def(v) { return (v === null || v === undefined || v === '') ? '-' : v }
       </div>
     </el-card>
 
-    <h3 style="margin:24px 0 12px">快捷入口</h3>
-    <div class="quick-grid">
-      <div v-for="link in menuLinks" :key="link.path" class="quick-card" @click="router.push(link.path)">
-        <span class="quick-icon">{{ link.icon }}</span>
-        <span class="quick-label">{{ link.label }}</span>
+    <template v-if="menuLinks.length">
+      <h3 style="margin:24px 0 12px">快捷入口</h3>
+      <div class="quick-grid">
+        <div v-for="link in menuLinks" :key="link.path" class="quick-card" @click="router.push(link.path)">
+          <span class="quick-icon">{{ link.icon }}</span>
+          <span class="quick-label">{{ link.label }}</span>
+        </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
@@ -175,4 +174,13 @@ function def(v) { return (v === null || v === undefined || v === '') ? '-' : v }
 .quick-card:hover { border-color: #488d37; box-shadow: 0 2px 8px rgba(72,141,55,0.1); }
 .quick-icon { display: block; font-size: 32px; margin-bottom: 8px; }
 .quick-label { font-size: 14px; color: #555; }
+
+/* 基础信息 el-descriptions：标签列加宽 + 基线对齐，消除“标签窄内容宽” */
+:deep(.el-descriptions__label) {
+  width: 130px;
+  min-width: 130px;
+}
+:deep(.el-descriptions__cell) {
+  vertical-align: baseline;
+}
 </style>

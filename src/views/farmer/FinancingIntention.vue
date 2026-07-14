@@ -270,7 +270,7 @@ onMounted(loadIntentions)
 </template>
 
 <style scoped>
-.intention-page { max-width: 1200px; }
+.intention-page { max-width: 1200px; margin: 0 auto; }
 .page-head {
   display: flex;
   justify-content: space-between;

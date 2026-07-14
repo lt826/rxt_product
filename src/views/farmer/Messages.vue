@@ -182,7 +182,7 @@ function clearPollTimer() {
 </template>
 
 <style scoped>
-.messages-page { max-width: 800px; }
+.messages-page { max-width: 1200px; margin: 0 auto; }
 .page-head { margin-bottom: 24px; }
 .page-title { font-size: 24px; font-weight: 800; color: var(--green-deep); margin: 0 0 4px; }
 .page-sub { font-size: 14px; color: var(--text-muted); margin: 0; }

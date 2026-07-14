@@ -55,10 +55,7 @@ const profileMenus = {
   admin: [
     { path: '/profile/center', label: '个人中心', icon: 'User' },
     { path: '/profile/basic', label: '基本信息', icon: 'Edit' },
-    { path: '/profile/password', label: '密码管理', icon: 'Lock' },
-    { divider: true, label: '平台管理' },
-    { path: '/profile/all-users', label: '所有用户', icon: 'UserFilled' },
-    { path: '/profile/all-goods', label: '所有商品', icon: 'GoodsFilled' }
+    { path: '/profile/password', label: '密码管理', icon: 'Lock' }
   ]
 }
 

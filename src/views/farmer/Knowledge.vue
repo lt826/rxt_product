@@ -17,6 +17,7 @@ onMounted(async () => {
         id: a.knowledgeId,
         title: a.title,
         content: a.content,
+        pic: a.picPath || '',
         desc: a.content ? a.content.substring(0, 120) + '...' : '',
         author: a.ownName || '平台',
         date: a.createTime ? a.createTime.substring(0, 10) : '-'
@@ -46,8 +47,11 @@ function openArticle(a) {
 
     <div v-loading="loading" class="agri-grid">
       <div v-for="article in articles" :key="article.id" class="agri-card" @click="openArticle(article)">
+        <div class="agri-thumb">
+          <img v-if="article.pic && article.pic.startsWith('http')" :src="article.pic" :alt="article.title" @error="article.pic = ''" />
+          <span v-else>🌾</span>
+        </div>
         <div class="agri-card-body">
-          <div class="agri-icon">📖</div>
           <h3 class="agri-title">{{ article.title }}</h3>
           <p class="agri-content">{{ article.desc }}</p>
           <div class="agri-meta">
@@ -72,23 +76,25 @@ function openArticle(a) {
 </template>
 
 <style scoped>
-.knowledge-page { max-width: 1200px; }
+.knowledge-page { max-width: 1200px; margin: 0 auto; }
 .page-head { margin-bottom: 24px; }
 .page-title { font-size: 24px; font-weight: 800; color: var(--green-deep); margin: 0 0 4px; }
 .page-sub { font-size: 14px; color: var(--text-muted); margin: 0; }
 
 .agri-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
-@media (max-width: 800px) { .agri-grid { grid-template-columns: 1fr; } }
 
 .agri-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 24px;
+  padding: 16px;
+  display: flex;
+  gap: 18px;
+  align-items: stretch;
   cursor: pointer;
   transition: all 0.25s;
 }
@@ -96,8 +102,26 @@ function openArticle(a) {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
-.agri-card-body { display: flex; flex-direction: column; gap: 12px; }
-.agri-icon { font-size: 32px; }
+.agri-thumb {
+  width: 170px;
+  height: 120px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+}
+.agri-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.agri-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .agri-title {
   font-size: 17px;
   font-weight: 700;
@@ -107,8 +131,9 @@ function openArticle(a) {
 .agri-content {
   font-size: 14px;
   color: var(--text-secondary);
-  line-height: 1.7;
+  line-height: 1.6;
   margin: 0;
+  flex: 1;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -116,9 +141,12 @@ function openArticle(a) {
 }
 .agri-meta {
   display: flex;
-  justify-content: space-between;
+  gap: 16px;
   font-size: 13px;
   color: var(--text-muted);
+}
+@media (max-width: 600px) {
+  .agri-thumb { width: 110px; height: 90px; font-size: 30px; }
 }
 
 .article-view .article-meta {

@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getStatsOverviewAPI } from '../../api/admin'
+import * as echarts from 'echarts'
+import { getStatsOverviewAPI, getUserGrowthAPI } from '../../api/admin'
 import { useUserStore } from '../../stores/user'
 
 const router = useRouter()
@@ -16,6 +17,17 @@ const stats = ref([
 ])
 
 const financeSummary = ref([])
+
+// 用户增长图表
+const chartRef = ref(null)
+let chartInstance = null
+const growthMode = ref('month')
+const growthLoading = ref(false)
+const growthData = ref([])
+
+const modeLabel = computed(() => {
+  return { day: '按日', month: '按月', year: '按年' }[growthMode.value] || '按月'
+})
 
 onMounted(async () => {
   try {
@@ -47,10 +59,121 @@ onMounted(async () => {
         }))
       }
     }
-  } catch {
-    // keep defaults
+  } catch { /* keep defaults */ }
+
+  await loadGrowthData()
+  initChart()
+
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  if (chartInstance) {
+    chartInstance.dispose()
+    chartInstance = null
   }
 })
+
+function handleResize() {
+  if (chartInstance) chartInstance.resize()
+}
+
+async function loadGrowthData() {
+  growthLoading.value = true
+  try {
+    const res = await getUserGrowthAPI(growthMode.value)
+    if (res.code === 200 && res.data) {
+      growthData.value = res.data
+    }
+  } catch { /* ignore */ }
+  finally { growthLoading.value = false }
+}
+
+async function onModeChange(mode) {
+  growthMode.value = mode
+  await loadGrowthData()
+  if (chartInstance) {
+    chartInstance.setOption(buildChartOption(), true)
+  }
+}
+
+function initChart() {
+  if (!chartRef.value) return
+  if (chartInstance) {
+    chartInstance.dispose()
+  }
+  chartInstance = echarts.init(chartRef.value)
+  chartInstance.setOption(buildChartOption())
+}
+
+function buildChartOption() {
+  const data = growthData.value || []
+  const dates = data.map(d => d.date)
+  const counts = data.map(d => d.count)
+
+  const xLabel = { day: '日期', month: '月份', year: '年份' }[growthMode.value] || '月份'
+
+  return {
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
+    },
+    grid: {
+      left: '3%', right: '4%', bottom: '3%', top: '8%', containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: dates,
+      axisLabel: { rotate: dates.length > 12 ? 45 : 0, fontSize: 11 },
+      name: xLabel
+    },
+    yAxis: {
+      type: 'value',
+      name: '新增用户',
+      minInterval: 1,
+      axisLabel: { formatter: '{value}' }
+    },
+    series: [
+      {
+        name: '新增用户',
+        type: 'bar',
+        data: counts,
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#67c23a' },
+            { offset: 1, color: '#b3e19d' }
+          ]),
+          borderRadius: [4, 4, 0, 0]
+        },
+        barWidth: '40%',
+        label: {
+          show: true,
+          position: 'top',
+          color: '#333',
+          fontSize: 11
+        }
+      },
+      {
+        name: '趋势',
+        type: 'line',
+        data: counts,
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6,
+        lineStyle: { color: '#409eff', width: 2 },
+        itemStyle: { color: '#409eff' },
+        label: {
+          show: true,
+          position: 'top',
+          color: '#409eff',
+          fontSize: 10,
+          formatter: p => p.value > 0 ? p.value : ''
+        }
+      }
+    ]
+  }
+}
 </script>
 
 <template>
@@ -79,10 +202,22 @@ onMounted(async () => {
     <el-row :gutter="20">
       <el-col :xs="24" :sm="24" :md="12">
         <el-card shadow="never">
-          <template #header><span>用户增长趋势</span></template>
-          <div class="chart-placeholder">
-            <el-icon :size="48" color="#c0c4cc"><TrendCharts /></el-icon>
-            <p>图表区域（待接入可视化组件）</p>
+          <template #header>
+            <div class="chart-header">
+              <span>用户增长趋势</span>
+              <el-radio-group v-model="growthMode" size="small" @change="onModeChange">
+                <el-radio-button value="day">按日</el-radio-button>
+                <el-radio-button value="month">按月</el-radio-button>
+                <el-radio-button value="year">按年</el-radio-button>
+              </el-radio-group>
+            </div>
+          </template>
+          <div v-loading="growthLoading" class="chart-body">
+            <div v-if="growthData.length === 0 && !growthLoading" class="chart-empty">
+              <el-icon :size="36" color="#c0c4cc"><TrendCharts /></el-icon>
+              <p>暂无增长数据</p>
+            </div>
+            <div ref="chartRef" class="chart-container"></div>
           </div>
         </el-card>
       </el-col>
@@ -135,14 +270,29 @@ onMounted(async () => {
 .stat-number { font-size: 28px; font-weight: 800; line-height: 1; color: var(--text); }
 .stat-label { margin-top: 6px; font-size: 13px; color: var(--text-muted); }
 
-.chart-placeholder {
-  height: 200px;
+/* 图表 */
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.chart-body {
+  position: relative;
+  min-height: 280px;
+}
+.chart-container {
+  width: 100%;
+  height: 280px;
+}
+.chart-empty {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   color: #c0c4cc;
-  gap: 12px;
+  gap: 8px;
 }
-.chart-placeholder p { font-size: 14px; margin: 0; }
+.chart-empty p { font-size: 14px; margin: 0; }
 </style>

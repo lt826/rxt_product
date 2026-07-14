@@ -225,7 +225,7 @@ function viewDetail(item) {
       <div class="goods-grid">
         <div v-for="item in filteredProducts" :key="item.id" class="goods-card">
           <div class="goods-img">
-            <img v-if="item.picture && item.picture.startsWith('http')" :src="item.picture" :alt="item.title" />
+            <img v-if="item.picture && item.picture.startsWith('http')" :src="item.picture" :alt="item.title" @error="item.picture = ''" />
             <span v-else>📦</span>
           </div>
           <div class="goods-info">
@@ -308,7 +308,7 @@ function viewDetail(item) {
 </template>
 
 <style scoped>
-.products-page { max-width: 1200px; }
+.products-page { max-width: 1200px; margin: 0 auto; }
 
 .page-head {
   display: flex;
@@ -355,12 +355,11 @@ function viewDetail(item) {
 
 .goods-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
-@media (max-width: 1200px) { .goods-grid { grid-template-columns: repeat(4, 1fr); } }
-@media (max-width: 900px) { .goods-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 600px) { .goods-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 900px) { .goods-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .goods-grid { grid-template-columns: 1fr; } }
 
 .goods-card {
   background: var(--surface);
@@ -404,7 +403,19 @@ function viewDetail(item) {
   align-items: center;
   margin-bottom: 8px;
 }
-.price { color: var(--amber); font-size: 18px; font-weight: 700; }
+.price {
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(135deg, #ff4d4f, #ff7a45);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 3px rgba(255, 77, 79, 0.25);
+}
 .goods-seller { font-size: 12px; color: var(--text-muted); }
 .goods-tags { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
 .goods-actions { display: flex; gap: 8px; }

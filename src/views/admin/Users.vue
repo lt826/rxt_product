@@ -37,6 +37,22 @@
       </div>
 
       <div v-else>
+        <!-- 搜索栏 -->
+        <div class="search-bar">
+          <el-input v-model="keyword" placeholder="用户名 / 昵称" clearable class="search-input"
+            @keyup.enter="onSearch" @clear="onSearch" />
+          <el-select v-model="roleFilter" placeholder="全部角色" clearable class="role-select"
+            @change="onSearch" @clear="onSearch">
+            <el-option label="农户" value="farmer" />
+            <el-option label="买家" value="buyer" />
+            <el-option label="银行" value="bank" />
+            <el-option label="专家" value="expert" />
+            <el-option label="管理员" value="admin" />
+          </el-select>
+          <el-button type="primary" @click="onSearch">搜索</el-button>
+          <el-button @click="resetSearch">重置</el-button>
+        </div>
+
         <el-table :data="users" v-loading="loading" stripe @row-click="showDetail">
           <el-table-column prop="userName" label="用户名" />
           <el-table-column prop="name" label="昵称" />
@@ -52,6 +68,22 @@
             </template>
           </el-table-column>
         </el-table>
+
+        <el-empty v-if="!loading && users.length === 0" description="暂无用户" />
+
+        <!-- 分页 -->
+        <div class="pagination-row">
+          <el-pagination
+            v-model:current-page="page"
+            v-model:page-size="size"
+            :page-sizes="[10, 20, 50]"
+            :total="total"
+            layout="total, sizes, prev, pager, next, jumper"
+            background
+            @size-change="onSizeChange"
+            @current-change="onPageChange"
+          />
+        </div>
       </div>
     </el-card>
 
@@ -102,7 +134,6 @@ import { getUsersAPI, getUserDetailAPI, createUserAPI, updateUserAPI, deleteUser
 const users = ref([])
 const loading = ref(false)
 const activeTab = ref('all')
-const searchForm = ref({ keyword: '', role: '', status: '' })
 const dialogVisible = ref(false)
 const editingUser = ref({ userName: '', nickName: '', phone: '', role: '', realName: '' })
 const isEdit = ref(false)
@@ -112,20 +143,57 @@ const detailVisible = ref(false)
 const detailUser = ref(null)
 const detailLoading = ref(false)
 
+// 分页 + 搜索
+const page = ref(1)
+const size = ref(10)
+const total = ref(0)
+const keyword = ref('')
+const roleFilter = ref('')
+
 const pendingCount = computed(() => pendingUsers.value.length)
 
 async function loadUsers() {
   loading.value = true
   try {
-    const res = await getUsersAPI()
-    if (res.code === 200) {
-      users.value = (res.data || []).map(u => ({
+    const params = {
+      page: page.value,
+      size: size.value
+    }
+    if (keyword.value.trim()) params.keyword = keyword.value.trim()
+    if (roleFilter.value) params.role = roleFilter.value
+    const res = await getUsersAPI(params)
+    if (res.code === 200 && res.data) {
+      users.value = (res.data.records || []).map(u => ({
         userName: u.userName, name: u.nickName || u.userName, role: u.role, phone: u.phone || '-',
         realName: u.realName || '-', status: u.status || 'approved',
         statusText: getStatusText(u.status), regDate: u.createTime ? u.createTime.substring(0, 10) : '-', _raw: u
       }))
+      total.value = res.data.total || 0
     }
   } catch { ElMessage.error('获取用户列表失败') } finally { loading.value = false }
+}
+
+function onSearch() {
+  page.value = 1
+  loadUsers()
+}
+
+function resetSearch() {
+  keyword.value = ''
+  roleFilter.value = ''
+  page.value = 1
+  loadUsers()
+}
+
+function onPageChange(p) {
+  page.value = p
+  loadUsers()
+}
+
+function onSizeChange(s) {
+  size.value = s
+  page.value = 1
+  loadUsers()
 }
 
 async function loadPendingUsers() {
@@ -139,7 +207,7 @@ async function loadPendingUsers() {
   } catch { ElMessage.error('获取待审批用户失败') } finally { pendingLoading.value = false }
 }
 
-function getStatusText(s) { const m = { pending: '待审批', approved: '已通过', rejected: '已拒绝', 正常: '已通过' }; return m[s] || s }
+function getStatusText(s) { const m = { pending: '待审批', approved: '已通过', rejected: '已拒绝', normal: '已通过' }; return m[s] || (s || '已通过') }
 function getStatusType(s) { const m = { pending: 'warning', approved: 'success', rejected: 'danger' }; return m[s] || 'info' }
 
 async function showDetail(row) {
@@ -190,4 +258,22 @@ onMounted(() => { loadUsers(); loadPendingUsers() })
 .page-title { font-size: 24px; font-weight: 800; color: var(--green-deep); margin: 0 0 4px; }
 .page-sub { font-size: 14px; color: var(--text-muted); margin: 0; }
 .card-header-row { display: flex; justify-content: space-between; align-items: center; }
+
+/* 搜索栏 */
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.search-input { width: 220px; }
+.role-select { width: 140px; }
+
+/* 分页 */
+.pagination-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
 </style>

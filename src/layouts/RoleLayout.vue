@@ -77,6 +77,7 @@ const ROLE_MENU_MAP = {
   admin: [
     { path: '/admin/dashboard', label: '首页', icon: 'HomeFilled' },
     { path: '/admin/users', label: '用户管理', icon: 'UserFilled' },
+    { path: '/admin/goods', label: '商品管理', icon: 'Goods' },
     { path: '/admin/config', label: '系统配置', icon: 'Setting' },
     { path: '/admin/stats', label: '数据统计', icon: 'DataAnalysis' }
   ]
@@ -492,6 +493,7 @@ onUnmounted(() => {
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
+  min-height: calc(100vh - 70px);
 }
 
 /* Responsive */

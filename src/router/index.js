@@ -85,6 +85,7 @@ const routes = [
     children: [
       { path: 'dashboard', name: 'AdminDashboard', component: () => import('../views/admin/Dashboard.vue'), meta: { title: '首页' } },
       { path: 'users', name: 'AdminUsers', component: () => import('../views/admin/Users.vue'), meta: { title: '用户管理' } },
+      { path: 'goods', name: 'AdminGoods', component: () => import('../views/admin/Goods.vue'), meta: { title: '商品管理' } },
       { path: 'config', name: 'AdminConfig', component: () => import('../views/admin/Config.vue'), meta: { title: '系统配置' } },
       { path: 'stats', name: 'AdminStats', component: () => import('../views/admin/Stats.vue'), meta: { title: '数据统计' } }
     ]
@@ -115,9 +116,7 @@ const routes = [
       { path: 'my-knowledge', name: 'ProfileMyKnowledge', component: () => import('../views/profile/MyKnowledge.vue'), meta: { title: '知识管理' } },
       { path: 'expert-info', name: 'ProfileExpertInfo', component: () => import('../views/profile/ExpertInfo.vue'), meta: { title: '专家信息' } },
       { path: 'bank/match', name: 'ProfileBankMatch', component: () => import('../views/profile/BankMatch.vue'), meta: { title: '智能匹配' } },
-      { path: 'bank/approval', name: 'ProfileBankApproval', component: () => import('../views/profile/BankApproval.vue'), meta: { title: '贷款审批' } },
-      { path: 'all-users', name: 'ProfileAllUsers', component: () => import('../views/profile/AllUsers.vue'), meta: { title: '用户管理' } },
-          { path: 'all-goods', name: 'ProfileAllGoods', component: () => import('../views/profile/AllGoods.vue'), meta: { title: '商品管理' } }
+      { path: 'bank/approval', name: 'ProfileBankApproval', component: () => import('../views/profile/BankApproval.vue'), meta: { title: '贷款审批' } }
         ]
       }
     ]

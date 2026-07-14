@@ -1,9 +1,10 @@
 import request from './index'
 
-export function getUsersAPI() {
+export function getUsersAPI(params) {
   return request({
     url: '/api/v1/admin/users',
-    method: 'get'
+    method: 'get',
+    params
   })
 }
 
@@ -41,6 +42,14 @@ export function getStatsOverviewAPI() {
   return request({
     url: '/api/v1/admin/stats/overview',
     method: 'get'
+  })
+}
+
+export function getUserGrowthAPI(mode) {
+  return request({
+    url: '/api/v1/admin/stats/user-growth',
+    method: 'get',
+    params: { mode }
   })
 }
 

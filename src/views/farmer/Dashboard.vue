@@ -141,6 +141,7 @@ onMounted(async () => {
 <style scoped>
 .dashboard {
   max-width: 1200px;
+  margin: 0 auto;
 }
 
 /* Welcome */
@@ -186,11 +187,16 @@ onMounted(async () => {
 .stat-gradient {
   padding: 16px;
   display: flex;
+  align-items: center;
   justify-content: center;
 }
 .stat-body {
-  padding: 16px 20px 20px;
+  padding: 16px 20px;
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 .stat-number {
   font-size: 32px;
@@ -219,7 +225,7 @@ onMounted(async () => {
 .actions-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
+  gap: 16px;
   margin-bottom: 32px;
 }
 @media (max-width: 900px) { .actions-grid { grid-template-columns: repeat(3, 1fr); } }

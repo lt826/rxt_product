@@ -155,7 +155,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.demands-page { max-width: 1200px; }
+.demands-page { max-width: 1200px; margin: 0 auto; }
 .page-head {
   display: flex;
   justify-content: space-between;

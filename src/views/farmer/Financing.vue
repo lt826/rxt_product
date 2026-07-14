@@ -735,7 +735,7 @@ function formatRate(rate) {
 
 
 <style scoped>
-.apply-page { max-width: 1400px; }
+.apply-page { max-width: 1200px; margin: 0 auto; }
 .page-head { margin-bottom: 24px; }
 .page-title {
   font-size: 24px;
