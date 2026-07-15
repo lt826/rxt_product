@@ -37,6 +37,12 @@ public class SellPurchase {
     /** 发货/收货地址 */
     private String address;
 
+    /** 发货人姓名 */
+    private String shipName;
+
+    /** 发货人电话 */
+    private String shipPhone;
+
     /** 订单状态，1待付款，2待发货，3待收货，4已收货 */
     private Integer purchaseStatus;
 

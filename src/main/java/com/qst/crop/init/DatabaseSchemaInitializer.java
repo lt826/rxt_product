@@ -65,6 +65,32 @@ public class DatabaseSchemaInitializer implements CommandLineRunner {
             }
         }
         log.info("数据库结构自检完成：成功 {} 条，失败 {} 条（缺失表已补建，已存在表保持不变）", executed, failed);
+        applyMigrations();
+    }
+
+    /**
+     * 执行增量迁移：给已存在的表补充字段（如订单物流字段 consignee/consignee_phone/ship_name/ship_phone）。
+     * 重复执行安全——列已存在时该条会被捕获跳过。对应脚本：order_logistics_schema.sql
+     */
+    private void applyMigrations() {
+        String[] alters = {
+                "ALTER TABLE tb_purchase ADD COLUMN consignee VARCHAR(100) DEFAULT NULL COMMENT '收货人姓名' AFTER address",
+                "ALTER TABLE tb_purchase ADD COLUMN consignee_phone VARCHAR(20) DEFAULT NULL COMMENT '收货人电话' AFTER consignee",
+                "ALTER TABLE tb_sell_purchase ADD COLUMN ship_name VARCHAR(100) DEFAULT NULL COMMENT '发货人姓名' AFTER address",
+                "ALTER TABLE tb_sell_purchase ADD COLUMN ship_phone VARCHAR(20) DEFAULT NULL COMMENT '发货人电话' AFTER ship_name"
+        };
+        int applied = 0;
+        int skipped = 0;
+        for (String ddl : alters) {
+            try {
+                jdbcTemplate.execute(ddl);
+                applied++;
+            } catch (Exception e) {
+                skipped++;
+                log.debug("迁移语句跳过（列可能已存在）：{}", e.getMessage());
+            }
+        }
+        log.info("数据库迁移自检完成：应用 {} 条，跳过 {} 条", applied, skipped);
     }
 
     private String readClasspath(String location) {

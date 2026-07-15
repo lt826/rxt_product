@@ -1,6 +1,8 @@
 package com.qst.crop.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.qst.crop.dao.ExpertMapper;
 import com.qst.crop.dao.FinanceMapper;
 import com.qst.crop.dao.PurchaseMapper;
@@ -41,8 +43,17 @@ public class AdminServiceImpl implements AdminService {
     private PurchaseMapper purchaseMapper;
 
     @Override
-    public List<User> getAllUsers() {
-        return userMapper.selectList(null);
+    public IPage<User> getAllUsers(int page, int size, String keyword, String role) {
+        Page<User> pageParam = new Page<>(page, size);
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            wrapper.and(w -> w.like("user_name", keyword).or().like("nick_name", keyword));
+        }
+        if (role != null && !role.trim().isEmpty()) {
+            wrapper.eq("role", role);
+        }
+        wrapper.orderByDesc("create_time");
+        return userMapper.selectPage(pageParam, wrapper);
     }
 
     @Override

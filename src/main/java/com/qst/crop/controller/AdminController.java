@@ -1,5 +1,7 @@
 package com.qst.crop.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.qst.crop.common.Result;
 import com.qst.crop.entity.User;
 import com.qst.crop.service.AdminService;
@@ -16,10 +18,21 @@ public class AdminController {
     @Autowired
     private AdminService adminService;
 
+    /**
+     * 获取用户列表（支持分页和搜索）
+     * @param page 页码，默认1
+     * @param size 每页数量，默认10
+     * @param keyword 关键词（用户名/昵称）
+     * @param role 角色过滤
+     */
     @GetMapping("/users")
-    public Result<List<User>> getAllUsers() {
-        List<User> list = adminService.getAllUsers();
-        return Result.success("查询成功", list);
+    public Result<IPage<User>> getAllUsers(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String role) {
+        IPage<User> userPage = adminService.getAllUsers(page, size, keyword, role);
+        return Result.success("查询成功", userPage);
     }
 
     @GetMapping("/users/{userName}")

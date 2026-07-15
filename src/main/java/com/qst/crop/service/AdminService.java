@@ -1,11 +1,12 @@
 package com.qst.crop.service;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.qst.crop.entity.User;
 import java.util.List;
 import java.util.Map;
 
 public interface AdminService {
-    List<User> getAllUsers();
+    IPage<User> getAllUsers(int page, int size, String keyword, String role);
     User getUserByUserName(String userName);
     boolean createUser(User user);
     boolean updateUser(User user);
