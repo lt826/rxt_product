@@ -51,14 +51,23 @@ const ROLE_MENU_MAP = {
       label: "农产品交易", icon: "ShoppingBasket", isRoot: true,
       children: [
         { path: "/farmer/products", label: "商品货源", icon: "Goods" },
-        { path: "/farmer/demands", label: "求购大厅", icon: "ShoppingCart" }
+        { path: "/farmer/demands", label: "求购大厅", icon: "ShoppingCart" },
+        { path: "/farmer/orders", label: "我的订单", icon: "List" }
       ]
     },
     { path: "/farmer/messages", label: "消息通知", icon: "Bell" }
   ],
   buyer: [
     { path: '/buyer/dashboard', label: '首页', icon: 'HomeFilled' },
-    { path: '/buyer/products', label: '商品采购', icon: 'ShoppingBag' },
+    {
+      label: '商品采购', icon: 'ShoppingBag', isRoot: true,
+      children: [
+        { path: '/buyer/products', label: '商品大厅', icon: 'Shop' },
+        { path: '/buyer/cart', label: '购物车', icon: 'ShoppingCart' },
+        { path: '/buyer/checkout', label: '订单结算', icon: 'Document' },
+        { path: '/buyer/orders', label: '我的订单', icon: 'List' }
+      ]
+    },
     { path: '/buyer/demand', label: '收购需求', icon: 'Document' },
     { path: '/buyer/contacts', label: '联系农户', icon: 'User' }
   ],

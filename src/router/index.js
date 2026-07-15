@@ -33,7 +33,8 @@ const routes = [
       { path: 'knowledge', name: 'FarmerKnowledge', component: () => import('../views/farmer/Knowledge.vue'), meta: { title: '农业知识' } },
       { path: 'expert-qa', name: 'FarmerExpertQA', component: () => import('../views/farmer/ExpertQA.vue'), meta: { title: '专家问答' } },
       { path: 'appointments', name: 'FarmerAppointments', component: () => import('../views/farmer/Appointments.vue'), meta: { title: '专家预约' } },
-      { path: 'messages', name: 'FarmerMessages', component: () => import('../views/farmer/Messages.vue'), meta: { title: '消息通知' } }
+      { path: 'messages', name: 'FarmerMessages', component: () => import('../views/farmer/Messages.vue'), meta: { title: '消息通知' } },
+      { path: 'orders', name: 'FarmerOrders', component: () => import('../views/farmer/Orders.vue'), meta: { title: '我的订单' } }
     ]
   },
   // 买家端 Buyer
@@ -45,9 +46,13 @@ const routes = [
     children: [
       { path: 'dashboard', name: 'BuyerDashboard', component: () => import('../views/buyer/Dashboard.vue'), meta: { title: '首页' } },
       { path: 'products', name: 'BuyerProducts', component: () => import('../views/buyer/Products.vue'), meta: { title: '商品采购' } },
+      { path: 'goods/:id', name: 'BuyerGoodsDetail', component: () => import('../views/buyer/GoodsDetail.vue'), meta: { title: '商品详情' } },
+      { path: 'cart', name: 'BuyerCart', component: () => import('../views/buyer/Cart.vue'), meta: { title: '购物车' } },
+      { path: 'checkout', name: 'BuyerCheckout', component: () => import('../views/buyer/Checkout.vue'), meta: { title: '订单结算' } },
       { path: 'demand', name: 'BuyerDemand', component: () => import('../views/buyer/Demand.vue'), meta: { title: '收购需求' } },
       { path: 'contacts', name: 'BuyerContacts', component: () => import('../views/buyer/Contacts.vue'), meta: { title: '联系农户' } },
-      { path: 'messages', name: 'BuyerMessages', component: () => import('../views/buyer/Messages.vue'), meta: { title: '买家消息' } }
+      { path: 'messages', name: 'BuyerMessages', component: () => import('../views/buyer/Messages.vue'), meta: { title: '买家消息' } },
+      { path: 'orders', name: 'BuyerOrders', component: () => import('../views/buyer/Orders.vue'), meta: { title: '我的订单' } }
     ]
   },
   // 银行端 Bank
@@ -108,8 +113,6 @@ const routes = [
       { path: 'password', name: 'ProfilePassword', component: () => import('../views/profile/Password.vue'), meta: { title: '密码管理' } },
       { path: 'my-products', name: 'ProfileMyProducts', component: () => import('../views/profile/MyProducts.vue'), meta: { title: '商品货源管理' } },
       { path: 'my-demands', name: 'ProfileMyDemands', component: () => import('../views/profile/MyDemands.vue'), meta: { title: '求购需求管理' } },
-      { path: 'orders/sold', name: 'ProfileSoldOrders', component: () => import('../views/profile/orders/Sold.vue'), meta: { title: '我卖出的' } },
-      { path: 'orders/bought', name: 'ProfileBoughtOrders', component: () => import('../views/profile/orders/Bought.vue'), meta: { title: '我买到的' } },
       { path: 'my-financing', name: 'ProfileMyFinancing', component: () => import('../views/profile/MyFinancing.vue'), meta: { title: '融资管理' } },
       { path: 'my-qa', name: 'ProfileMyQA', component: () => import('../views/profile/MyQA.vue'), meta: { title: '问答管理' } },
       { path: 'my-appointments', name: 'ProfileMyAppointments', component: () => import('../views/profile/MyAppointments.vue'), meta: { title: '预约管理' } },
@@ -119,19 +122,6 @@ const routes = [
       { path: 'bank/approval', name: 'ProfileBankApproval', component: () => import('../views/profile/BankApproval.vue'), meta: { title: '贷款审批' } }
         ]
       }
-    ]
-  },
-  // 交易平台 Trade (购物车、结算)
-  {
-    path: '/trade',
-    component: () => import('../layouts/PlatformLayout.vue'),
-    meta: { title: '交易平台', requiresAuth: true },
-    redirect: '/trade/home',
-    children: [
-      { path: 'home', name: 'TradeHome', component: () => import('../views/platform/Home.vue'), meta: { title: '商品交易' } },
-      { path: 'cart', name: 'TradeCart', component: () => import('../views/platform/Cart.vue'), meta: { title: '购物车' } },
-      { path: 'checkout', name: 'TradeCheckout', component: () => import('../views/platform/Checkout.vue'), meta: { title: '订单结算' } },
-      { path: 'goods/:id', name: 'GoodsDetail', component: () => import('../views/platform/GoodsDetail.vue'), meta: { title: '商品详情' } }
     ]
   }
 ]

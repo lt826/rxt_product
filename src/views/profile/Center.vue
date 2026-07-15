@@ -57,11 +57,11 @@ onMounted(loadProfile)
 const roleMenuLinks = {
   farmer: [
     { label: '商品货源管理', path: '/profile/my-products', icon: '📦' },
-    { label: '我的订单', path: '/profile/orders/sold', icon: '📄' },
+    { label: '我的订单', path: '/farmer/orders', icon: '📄' },
     { label: '我的融资管理', path: '/profile/my-financing', icon: '💰' }
   ],
   buyer: [
-    { label: '我的订单', path: '/profile/orders/bought', icon: '📄' },
+    { label: '我的订单', path: '/buyer/orders', icon: '📄' },
     { label: '收货地址管理', path: '/profile/address', icon: '📍' }
   ],
   expert: [

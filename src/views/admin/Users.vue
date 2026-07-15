@@ -87,7 +87,8 @@
       </div>
     </el-card>
 
-    <el-drawer v-model="detailVisible" title="用户详情" size="400px" v-loading="detailLoading">
+    <el-drawer v-model="detailVisible" title="用户详情" size="400px">
+      <div v-loading="detailLoading">
       <template v-if="detailUser">
         <el-descriptions :column="1" border>
           <el-descriptions-item label="用户名">{{ detailUser.userName }}</el-descriptions-item>
@@ -102,6 +103,8 @@
           <el-descriptions-item label="注册时间">{{ detailUser.createTime ? detailUser.createTime.substring(0, 10) : '-' }}</el-descriptions-item>
         </el-descriptions>
       </template>
+      <el-empty v-else-if="!detailLoading" description="暂无详情" />
+      </div>
       <template #footer><el-button @click="detailVisible = false">关闭</el-button></template>
     </el-drawer>
 

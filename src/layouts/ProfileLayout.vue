@@ -23,8 +23,6 @@ const profileMenus = {
     { path: '/profile/password', label: '密码管理', icon: 'Lock' },
     { divider: true, label: '我的发布' },
     { path: '/profile/my-products', label: '商品货源管理', icon: 'Goods' },
-    { divider: true, label: '我的订单' },
-    { path: '/profile/orders/sold', label: '我卖出的', icon: 'Sell' },
     { divider: true, label: '融资' },
     { path: '/profile/my-financing', label: '融资管理', icon: 'Coin' }
   ],
@@ -32,9 +30,7 @@ const profileMenus = {
     { path: '/profile/center', label: '个人中心', icon: 'User' },
     { path: '/profile/basic', label: '基本信息', icon: 'Edit' },
     { path: '/profile/address', label: '收货地址', icon: 'Location' },
-    { path: '/profile/password', label: '密码管理', icon: 'Lock' },
-    { divider: true, label: '我的订单' },
-    { path: '/profile/orders/bought', label: '我买到的', icon: 'TakeawayBox' }
+    { path: '/profile/password', label: '密码管理', icon: 'Lock' }
   ],
   expert: [
     { path: '/profile/center', label: '个人中心', icon: 'User' },

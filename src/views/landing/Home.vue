@@ -242,7 +242,7 @@ function enterRole(roleId) {
         <h2>助农电商</h2>
       </div>
       <div class="shop-grid">
-        <div v-for="(item, i) in shopItems" :key="i" class="shop-card" @click="item.id && router.push('/trade/goods/' + item.id)">
+        <div v-for="(item, i) in shopItems" :key="i" class="shop-card" @click="item.id && router.push('/buyer/goods/' + item.id)">
           <div class="shop-card-icon">{{ item.icon }}</div>
           <div class="shop-card-body">
             <div class="shop-card-name">{{ item.name }}</div>
@@ -251,7 +251,7 @@ function enterRole(roleId) {
         </div>
       </div>
       <div class="section-more">
-        <el-button type="primary" size="large" @click="router.push('/trade')">进入农产品交易 →</el-button>
+        <el-button type="primary" size="large" @click="router.push('/buyer/products')">进入农产品交易 →</el-button>
       </div>
     </section>
 

@@ -46,7 +46,7 @@ function saveCart() {
 
 function checkout() {
   if (cart.value.length === 0) return ElMessage.warning('购物车为空')
-  router.push('/trade/checkout')
+  router.push('/buyer/checkout')
 }
 
 // Load goods info for display
@@ -76,7 +76,7 @@ onMounted(async () => {
       <div class="empty-icon">🛒</div>
       <h3>购物车是空的</h3>
       <p>快去挑选心仪的农产品吧</p>
-      <el-button type="primary" size="large" @click="router.push('/trade/home')">去逛逛</el-button>
+      <el-button type="primary" size="large" @click="router.push('/buyer/products')">去逛逛</el-button>
     </div>
 
     <template v-else>

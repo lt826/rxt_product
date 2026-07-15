@@ -64,7 +64,7 @@ onMounted(loadDashboard)
       </div>
       <div style="display:flex;gap:8px">
         <el-button @click="router.push('/buyer/demand')">发布收购需求</el-button>
-        <el-button type="primary" @click="router.push('/trade/home')">浏览市场 →</el-button>
+        <el-button type="primary" @click="router.push('/buyer/products')">浏览市场 →</el-button>
       </div>
     </div>
 

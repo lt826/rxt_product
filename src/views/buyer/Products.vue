@@ -47,7 +47,7 @@ function addToCart(item) {
 }
 
 function goToCart() {
-  router.push('/trade/cart')
+  router.push('/buyer/cart')
 }
 
 onMounted(() => { loadList() })
@@ -64,7 +64,7 @@ function handleImageError(event) {
   <div class="products-page">
     <div class="page-head">
       <div>
-        <h2 class="page-title">商品采购</h2>
+        <h2 class="page-title">商品大厅</h2>
         <p class="page-sub">浏览优质农产品，一键加入购物车</p>
       </div>
       <div class="head-actions">
@@ -89,7 +89,7 @@ function handleImageError(event) {
 
     <div v-loading="loading" class="goods-grid">
       <div v-for="item in list" :key="item.goodsId" class="goods-card">
-        <div class="goods-img" @click="router.push('/trade/goods/' + item.goodsId)" style="cursor:pointer">
+        <div class="goods-img" @click="router.push('/buyer/goods/' + item.goodsId)" style="cursor:pointer">
           <img
             v-if="item.picture && item.picture.startsWith('http')"
             :src="item.picture"
@@ -114,9 +114,7 @@ function handleImageError(event) {
         </div>
       </div>
     </div>
-    <el-empty v-if="!list.length && !loading" description="暂无农户供应商品">
-      <el-button type="primary" @click="router.push('/trade/home')">去商品大厅看看</el-button>
-    </el-empty>
+    <el-empty v-if="!list.length && !loading" description="暂无农户供应商品" />
   </div>
 </template>
 
