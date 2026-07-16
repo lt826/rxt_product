@@ -4,8 +4,12 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getConversationAPI, sendMessageAPI } from '../../api/message'
 import { getUserInfoAPI } from '../../api/user'
+import { getMyGoodsAPI } from '../../api/goods'
 import { useUserStore } from '../../stores/user'
 import { useMessageStore } from '../../stores/message'
+import { buildGoodsCardContent, parseGoodsCard, goodsPreviewText } from '../../utils/goodsMessage'
+import GoodsCardMessage from '../../components/GoodsCardMessage.vue'
+import { Goods } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const userStore = useUserStore()
@@ -23,6 +27,11 @@ const chatMessages = ref([])
 const newMessage = ref('')
 const messagesContainer = ref(null)
 let pollTimer = null
+
+// 商品选择（在聊天里把自己的商品作为卡片发给买家）
+const goodsPickerVisible = ref(false)
+const myGoods = ref([])
+const goodsLoading = ref(false)
 
 const allConversations = computed(() => messageStore.conversations)
 const filteredConversations = computed(() => {
@@ -101,6 +110,34 @@ async function sendMessage() {
     if (res && res.code === 200) { newMessage.value = ''; await loadChatMessages() }
   } catch { ElMessage.error('发送失败') }
 }
+
+// 打开"选择商品"弹窗，加载我发布的供应商品(type=1)
+async function openGoodsPicker() {
+  goodsPickerVisible.value = true
+  goodsLoading.value = true
+  try {
+    const res = await getMyGoodsAPI({ type: '1' })
+    myGoods.value = res && res.code === 200 ? (res.data || []) : []
+  } catch { myGoods.value = [] } finally { goodsLoading.value = false }
+}
+
+// 把选中商品作为卡片消息发送给当前对话方
+async function sendGoods(goods) {
+  if (!chatPartner.value) return
+  try {
+    const res = await sendMessageAPI({ toUser: chatPartner.value, content: buildGoodsCardContent(goods) })
+    if (res && res.code === 200) {
+      goodsPickerVisible.value = false
+      await loadChatMessages()
+      ElMessage.success('已发送商品：' + goods.title)
+    } else {
+      ElMessage.error((res && res.message) || '发送失败')
+    }
+  } catch { ElMessage.error('发送失败') }
+}
+
+// 解析消息为商品卡片（用于在气泡里渲染卡片）
+function goodsCardOf(msg) { return parseGoodsCard(msg.content) }
 
 async function deleteSelected() {
   const targets = selectedRead.value
@@ -211,7 +248,7 @@ onUnmounted(() => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null 
               <span class="conv-name">{{ conv.partnerName || conv.sender }}</span>
               <span class="conv-time">{{ formatDate(conv.lastTime) }}</span>
             </div>
-            <div class="conv-preview">{{ conv.lastContent || '点击查看对话' }}</div>
+            <div class="conv-preview">{{ goodsPreviewText(conv.lastContent) || '点击查看对话' }}</div>
           </div>
           <el-badge v-if="conv.unreadCount > 0" :value="conv.unreadCount" :max="99" type="danger" />
           <el-tag v-else size="small" type="info" effect="plain">已读</el-tag>
@@ -230,7 +267,8 @@ onUnmounted(() => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null 
           class="message-row"
           :class="msg.fromUser === currentUserName ? 'sent' : 'received'"
         >
-          <div class="message-bubble">{{ msg.content }}</div>
+          <GoodsCardMessage v-if="goodsCardOf(msg)" :card="goodsCardOf(msg)" :can-buy="false" />
+          <div v-else class="message-bubble">{{ msg.content }}</div>
           <div class="message-time">{{ formatTime(msg.createTime) }}</div>
         </div>
       </div>
@@ -238,7 +276,32 @@ onUnmounted(() => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null 
         <el-input v-model="newMessage" type="textarea" :rows="3" placeholder="回复消息..." @keydown.enter.ctrl="sendMessage" />
         <div class="chat-input-actions">
           <el-button size="small" @click="chatVisible = false">关闭</el-button>
+          <el-button size="small" type="success" plain @click="openGoodsPicker">
+            <el-icon><Goods /></el-icon>&nbsp;发送商品
+          </el-button>
           <el-button size="small" type="primary" @click="sendMessage">发送</el-button>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- 选择并发送商品 -->
+    <el-dialog v-model="goodsPickerVisible" title="选择要发送的商品" width="560px" append-to-body>
+      <div v-loading="goodsLoading" style="min-height:120px">
+        <div v-if="!goodsLoading && myGoods.length === 0" style="text-align:center;padding:30px 0;color:var(--text-muted)">
+          您还没有发布的供应商品，请先到「商品货源」页面发布。
+        </div>
+        <div class="pick-goods-list">
+          <div v-for="g in myGoods" :key="g.goodsId" class="pick-goods-item" @click="sendGoods(g)">
+            <div class="pick-thumb">
+              <img v-if="g.picture && g.picture.startsWith('http')" :src="g.picture" :alt="g.title" />
+              <span v-else>📦</span>
+            </div>
+            <div class="pick-info">
+              <div class="pick-title">{{ g.title }}</div>
+              <div class="pick-price">¥{{ g.price }}<span v-if="g.address" class="pick-addr"> · {{ g.address }}</span></div>
+            </div>
+            <el-button size="small" type="primary" plain>发送</el-button>
+          </div>
         </div>
       </div>
     </el-dialog>
@@ -285,4 +348,18 @@ onUnmounted(() => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null 
 .message-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 .chat-input-area { margin-top: 12px; }
 .chat-input-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+/* 商品选择弹窗 */
+.pick-goods-list { display: flex; flex-direction: column; gap: 8px; }
+.pick-goods-item {
+  display: flex; align-items: center; gap: 12px; padding: 10px;
+  border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;
+}
+.pick-goods-item:hover { background: var(--green-mist); border-color: var(--green); }
+.pick-thumb { width: 48px; height: 48px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.pick-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.pick-info { flex: 1; min-width: 0; }
+.pick-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.pick-price { font-size: 13px; color: var(--amber); font-weight: 600; margin-top: 2px; }
+.pick-addr { color: var(--text-muted); font-weight: 400; }
 </style>

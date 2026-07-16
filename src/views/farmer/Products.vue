@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { getGoodsListAPI, getMyGoodsAPI, publishGoodsAPI, deleteGoodsAPI } from '../../api/goods'
+import { uploadImageAPI } from '../../api/upload'
 import { useUserStore } from '../../stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Delete, Search } from '@element-plus/icons-vue'
@@ -82,7 +83,7 @@ function resetFilters() {
   sortOrder.value = ''
 }
 
-function handleImageChange(file) {
+async function handleImageChange(file) {
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
   if (!allowedTypes.includes(file.raw.type)) {
     ElMessage.warning('只支持上传 JPG、PNG、GIF、WEBP 格式的图片')
@@ -94,17 +95,23 @@ function handleImageChange(file) {
   }
   imageFile.value = file.raw
   uploadingImage.value = true
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    imagePreview.value = e.target.result
-    form.value.picture = e.target.result
+  try {
+    // 上传到后端，拿到可访问的图片 URL（不再存 base64，避免超过数据库字段长度）
+    const res = await uploadImageAPI(file.raw)
+    if (res.code === 200) {
+      form.value.picture = res.data
+      imagePreview.value = res.data
+      ElMessage.success('图片上传成功')
+    } else {
+      ElMessage.error(res.message || '图片上传失败')
+      imageFile.value = null
+    }
+  } catch {
+    ElMessage.error('图片上传失败，请重试')
+    imageFile.value = null
+  } finally {
     uploadingImage.value = false
   }
-  reader.onerror = () => {
-    ElMessage.error('图片读取失败')
-    uploadingImage.value = false
-  }
-  reader.readAsDataURL(file.raw)
   return false
 }
 
@@ -140,6 +147,7 @@ async function submitPublish() {
 
   submitting.value = true
   try {
+    if (uploadingImage.value) return ElMessage.warning('图片正在上传，请稍候')
     const contentWithCategory = '【商品类型：' + form.value.type.trim() + '】\n' + form.value.content.trim()
     const res = await publishGoodsAPI({
       title: form.value.title.trim(), price: parseFloat(form.value.price),
@@ -282,11 +290,12 @@ function viewDetail(item) {
               </div>
             </div>
             <el-upload v-else :show-file-list="false" :on-change="handleImageChange" :auto-upload="false"
-              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" class="image-uploader">
+              :disabled="uploadingImage" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" class="image-uploader">
               <div class="upload-trigger">
                 <el-icon :size="32"><Plus /></el-icon>
-                <div>点击上传图片</div>
-                <div class="upload-hint">JPG / PNG / GIF / WEBP，最大 5MB</div>
+                <div v-if="uploadingImage" class="uploading-text">图片上传中...</div>
+                <div v-else>点击上传图片</div>
+                <div v-if="!uploadingImage" class="upload-hint">JPG / PNG / GIF / WEBP，最大 5MB</div>
               </div>
             </el-upload>
             <div v-if="!imagePreview" class="url-input-section">
@@ -301,7 +310,7 @@ function viewDetail(item) {
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitPublish">确认发布</el-button>
+        <el-button type="primary" :loading="submitting || uploadingImage" @click="submitPublish">确认发布</el-button>
       </template>
     </el-dialog>
   </div>
@@ -441,6 +450,7 @@ function viewDetail(item) {
 .upload-trigger .el-icon { color: var(--text-muted); margin-bottom: 8px; }
 .upload-trigger > div { font-size: 14px; color: var(--text-secondary); }
 .upload-hint { font-size: 12px; color: var(--text-muted) !important; margin-top: 2px; }
+.uploading-text { color: var(--green); font-weight: 500; }
 .image-preview {
   position: relative;
   width: 100%;

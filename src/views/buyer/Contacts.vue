@@ -6,6 +6,8 @@ import { getFarmersAPI } from '../../api/user'
 import { getConversationAPI, sendMessageAPI } from '../../api/message'
 import { useUserStore } from '../../stores/user'
 import { useMessageStore } from '../../stores/message'
+import { parseGoodsCard, goodsPreviewText } from '../../utils/goodsMessage'
+import GoodsCardMessage from '../../components/GoodsCardMessage.vue'
 
 const userStore = useUserStore()
 const messageStore = useMessageStore()
@@ -133,6 +135,9 @@ function closeChat() {
   newMessage.value = ''
 }
 
+// 解析消息为商品卡片（农户发来的商品可在卡片上一键加入购物车）
+function goodsCardOf(msg) { return parseGoodsCard(msg && msg.content) }
+
 function formatTime(timeStr) { return timeStr ? String(timeStr).replace('T', ' ').substring(11, 16) : '' }
 function formatLast(timeStr) { return timeStr ? String(timeStr).replace('T', ' ').substring(0, 16) : '' }
 function scrollToBottom() { if (messagesContainer.value) messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight }
@@ -190,7 +195,7 @@ onUnmounted(() => {
                 <el-badge v-if="f.unreadCount > 0" :value="f.unreadCount" :max="99" type="danger" class="name-badge" />
               </div>
               <div class="farmer-detail">{{ f.nickName || f.userName }} · {{ f.phone || '暂无电话' }} · {{ f.address || '地址未填写' }}</div>
-              <div v-if="f.lastContent" class="farmer-last">最新消息：{{ f.lastContent }}<span v-if="f.lastTime"> · {{ formatLast(f.lastTime) }}</span></div>
+              <div v-if="f.lastContent" class="farmer-last">最新消息：{{ goodsPreviewText(f.lastContent) }}<span v-if="f.lastTime"> · {{ formatLast(f.lastTime) }}</span></div>
             </div>
           </div>
           <el-button :type="f.unreadCount > 0 ? 'danger' : 'primary'" size="small" @click="openChat(f)">
@@ -217,7 +222,8 @@ onUnmounted(() => {
           暂无消息，开始对话吧！
         </div>
         <div v-for="msg in chatMessages" :key="msg.messageId" class="message-row" :class="msg.fromUser === currentUserName ? 'sent' : 'received'">
-          <div class="message-bubble">{{ msg.content }}</div>
+          <GoodsCardMessage v-if="goodsCardOf(msg)" :card="goodsCardOf(msg)" :can-buy="true" />
+          <div v-else class="message-bubble">{{ msg.content }}</div>
           <div class="message-time">{{ formatTime(msg.createTime) }}</div>
         </div>
       </div>

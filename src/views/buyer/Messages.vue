@@ -5,6 +5,8 @@ import { ElMessage } from 'element-plus'
 import { getConversationAPI, sendMessageAPI } from '../../api/message'
 import { getFarmersAPI, getUserInfoAPI } from '../../api/user'
 import { useUserStore } from '../../stores/user'
+import { parseGoodsCard } from '../../utils/goodsMessage'
+import GoodsCardMessage from '../../components/GoodsCardMessage.vue'
 
 const route = useRoute()
 const userStore = useUserStore()
@@ -82,6 +84,9 @@ async function sendMessage() {
   } catch { ElMessage.error('发送失败') }
 }
 
+// 解析消息为商品卡片（农户发来的商品可在卡片上一键加入购物车）
+function goodsCardOf(msg) { return parseGoodsCard(msg && msg.content) }
+
 function formatTime(timeStr) { if (!timeStr) return ''; return timeStr.replace('T', ' ').substring(11, 16) }
 function scrollToBottom() { if (messagesContainer.value) messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight }
 function clearPollTimer() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
@@ -92,7 +97,7 @@ function clearPollTimer() { if (pollTimer) { clearInterval(pollTimer); pollTimer
     <div class="page-head">
       <div>
         <h2 class="page-title">买家消息</h2>
-        <p class="page-sub">与买家沟通，了解需求</p>
+        <p class="page-sub">与农户沟通，了解需求</p>
       </div>
     </div>
     <el-card shadow="never" v-loading="loading">
@@ -117,7 +122,8 @@ function clearPollTimer() { if (pollTimer) { clearInterval(pollTimer); pollTimer
           暂无消息，开始对话吧！
         </div>
         <div v-for="msg in chatMessages" :key="msg.messageId" class="message-row" :class="msg.fromUser === currentUserName ? 'sent' : 'received'">
-          <div class="message-bubble">{{ msg.content }}</div>
+          <GoodsCardMessage v-if="goodsCardOf(msg)" :card="goodsCardOf(msg)" :can-buy="true" />
+          <div v-else class="message-bubble">{{ msg.content }}</div>
           <div class="message-time">{{ formatTime(msg.createTime) }}</div>
         </div>
       </div>
