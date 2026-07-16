@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getSoldOrdersAPI, shipOrderAPI } from '../../api/order'
+import { listAddressAPI } from '../../api/address'
 
 const orders = ref([])
 const loading = ref(false)
@@ -10,6 +11,10 @@ const loading = ref(false)
 const shipVisible = ref(false)
 const shipping = ref(false)
 const shipForm = ref({ purchaseId: null, shipAddress: '', shipName: '', shipPhone: '' })
+// 当前农户的发货地址列表与默认地址（用于发货时自动带入 / 快速选择）
+const addressList = ref([])
+const defaultAddr = ref(null)
+const selectedAddrId = ref(null)
 
 async function load() {
   loading.value = true
@@ -21,13 +26,37 @@ async function load() {
   }
 }
 
+// 拉取当前农户的发货地址，记录默认地址（自动填写用）
+async function loadAddress() {
+  try {
+    const res = await listAddressAPI()
+    if (res && res.code === 200) {
+      addressList.value = res.data || []
+      // 优先默认地址，没有默认则取第一条
+      defaultAddr.value = addressList.value.find(a => a.isDefault === 1) || addressList.value[0] || null
+    }
+  } catch { /* ignore */ }
+}
+
+// 选择某条已保存地址，快速填充发货信息
+function pickAddress(id) {
+  const addr = addressList.value.find(a => a.id === id)
+  if (!addr) return
+  shipForm.value.shipName = addr.consignee || ''
+  shipForm.value.shipPhone = addr.phone || ''
+  shipForm.value.shipAddress = addr.addressDetail || ''
+}
+
 function openShip(o) {
+  // 优先沿用订单已有物流信息，否则自动带入默认发货地址
+  const base = defaultAddr.value
   shipForm.value = {
     purchaseId: o.purchaseId,
-    shipAddress: o.shipAddress || '',
-    shipName: o.shipName || '',
-    shipPhone: o.shipPhone || ''
+    shipAddress: o.shipAddress || base?.addressDetail || '',
+    shipName: o.shipName || base?.consignee || '',
+    shipPhone: o.shipPhone || base?.phone || ''
   }
+  selectedAddrId.value = base?.id ?? null
   shipVisible.value = true
 }
 
@@ -61,7 +90,10 @@ function tagType(s) {
   return 'info'
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  loadAddress()
+})
 </script>
 
 <template>
@@ -112,6 +144,14 @@ onMounted(load)
     <!-- 发货弹窗 -->
     <el-dialog v-model="shipVisible" title="填写物流信息" width="460px">
       <el-form :model="shipForm" label-width="90px">
+        <el-form-item v-if="addressList.length" label="常用地址">
+          <el-select v-model="selectedAddrId" placeholder="选择已保存的发货地址" style="width:100%" @change="pickAddress">
+            <el-option v-for="a in addressList" :key="a.id" :label="`${a.consignee} ${a.phone}`" :value="a.id">
+              <span style="float:left">{{ a.consignee }} {{ a.phone }}</span>
+              <span style="float:right;color:var(--text-muted);font-size:12px">{{ a.isDefault === 1 ? '默认' : '' }}</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
         <el-form-item label="发货人姓名">
           <el-input v-model="shipForm.shipName" placeholder="请填写发货人姓名" />
         </el-form-item>

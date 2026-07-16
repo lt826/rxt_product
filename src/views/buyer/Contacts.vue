@@ -1,37 +1,101 @@
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 import { getFarmersAPI } from '../../api/user'
-import { getConversationAPI, sendMessageAPI, markAsReadAPI } from '../../api/message'
+import { getConversationAPI, sendMessageAPI } from '../../api/message'
 import { useUserStore } from '../../stores/user'
+import { useMessageStore } from '../../stores/message'
 
 const userStore = useUserStore()
+const messageStore = useMessageStore()
 const currentUserName = ref(userStore.userInfo?.userName || '')
-const farmers = ref([])
+
+const allFarmers = ref([])
 const loading = ref(false)
+const activeTab = ref('contacted') // contacted | contactable
+const keyword = ref('')
+const page = ref(1)
+const pageSize = ref(8)
+
+// 聊天弹窗
 const chatVisible = ref(false)
 const chatFarmer = ref(null)
 const chatMessages = ref([])
 const newMessage = ref('')
 const messagesContainer = ref(null)
-let pollTimer = null
+let refreshTimer = null
+let chatTimer = null
 
-onMounted(async () => { await loadFarmers() })
-onUnmounted(() => { clearPollTimer() })
+// 会话映射：userName -> 会话信息（含未读数/预览）
+const convMap = computed(() => {
+  const m = {}
+  messageStore.conversations.forEach(c => { m[c.sender] = c })
+  return m
+})
+
+// 已联系农户：存在会话记录的农户，未读置顶
+const contactedFarmers = computed(() => {
+  const list = allFarmers.value
+    .filter(f => convMap.value[f.userName])
+    .map(f => {
+      const c = convMap.value[f.userName]
+      return {
+        ...f,
+        unreadCount: c.unreadCount || 0,
+        lastContent: c.lastContent || '',
+        lastTime: c.lastTime || '',
+        partnerName: c.partnerName || f.realName || f.nickName || f.userName
+      }
+    })
+  list.sort((a, b) => {
+    const au = a.unreadCount > 0 ? 1 : 0
+    const bu = b.unreadCount > 0 ? 1 : 0
+    if (au !== bu) return bu - au
+    return (b.lastTime || '').localeCompare(a.lastTime || '')
+  })
+  return list
+})
+const contactedUnread = computed(() => contactedFarmers.value.filter(f => f.unreadCount > 0).length)
+const contactedSet = computed(() => new Set(contactedFarmers.value.map(f => f.userName)))
+const contactableFarmers = computed(() => allFarmers.value.filter(f => !contactedSet.value.has(f.userName)))
+
+const filteredList = computed(() => {
+  const base = activeTab.value === 'contacted' ? contactedFarmers.value : contactableFarmers.value
+  const kw = keyword.value.trim().toLowerCase()
+  if (!kw) return base
+  return base.filter(f =>
+    (f.realName || '').toLowerCase().includes(kw) ||
+    (f.nickName || '').toLowerCase().includes(kw) ||
+    (f.userName || '').toLowerCase().includes(kw) ||
+    (f.phone || '').toLowerCase().includes(kw) ||
+    (f.address || '').toLowerCase().includes(kw)
+  )
+})
+const total = computed(() => filteredList.value.length)
+const pagedList = computed(() => {
+  const start = (page.value - 1) * pageSize.value
+  return filteredList.value.slice(start, start + pageSize.value)
+})
+
+// 切换 Tab 或搜索时回到第一页
+watch([activeTab, keyword], () => { page.value = 1 })
 
 async function loadFarmers() {
   loading.value = true
   try {
     const res = await getFarmersAPI()
-    if (res && res.code === 200) farmers.value = (res.data || []).filter(u => u && u.role === 'farmer')
+    if (res && res.code === 200) allFarmers.value = (res.data || []).filter(u => u && u.role === 'farmer')
   } catch { ElMessage.error('获取农户列表失败') } finally { loading.value = false }
 }
 
-function openChat(farmer) {
-  chatFarmer.value = farmer
+function openChat(f) {
+  chatFarmer.value = f
   chatVisible.value = true
   loadChatMessages()
-  pollTimer = setInterval(loadChatMessages, 3000)
+  // 进入对话即清除该农户未读（红点消失）
+  if ((convMap.value[f.userName]?.unreadCount || 0) > 0) messageStore.markRead(f.userName)
+  chatTimer = setInterval(loadChatMessages, 3000)
 }
 
 async function loadChatMessages() {
@@ -50,24 +114,41 @@ async function sendMessage() {
   if (!newMessage.value.trim() || !chatFarmer.value) return
   try {
     const res = await sendMessageAPI({ toUser: chatFarmer.value.userName, content: newMessage.value.trim() })
-    if (res && res.code === 200) { newMessage.value = ''; await loadChatMessages() }
+    if (res && res.code === 200) {
+      newMessage.value = ''
+      await loadChatMessages()
+      // 主动联系 → 记入"已联系农户"并刷新预览
+      const last = chatMessages.value[chatMessages.value.length - 1]
+      const name = chatFarmer.value.realName || chatFarmer.value.nickName || chatFarmer.value.userName
+      messageStore.trackPartner(chatFarmer.value.userName, name, last?.content, last?.createTime)
+    }
   } catch { ElMessage.error('发送失败') }
 }
 
-async function markPartnerRead() {
-  if (!chatFarmer.value) return
-  try { await markAsReadAPI(chatFarmer.value.userName) } catch { /* ignore */ }
+function closeChat() {
+  if (chatTimer) { clearInterval(chatTimer); chatTimer = null }
+  chatVisible.value = false
+  chatFarmer.value = null
+  chatMessages.value = []
+  newMessage.value = ''
 }
 
-function formatTime(timeStr) {
-  if (!timeStr) return ''
-  return timeStr.replace('T', ' ').substring(11, 16)
-}
-function scrollToBottom() {
-  if (messagesContainer.value) messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-}
-function closeChat() { clearPollTimer(); markPartnerRead(); chatVisible.value = false; chatFarmer.value = null; chatMessages.value = []; newMessage.value = '' }
-function clearPollTimer() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
+function formatTime(timeStr) { return timeStr ? String(timeStr).replace('T', ' ').substring(11, 16) : '' }
+function formatLast(timeStr) { return timeStr ? String(timeStr).replace('T', ' ').substring(0, 16) : '' }
+function scrollToBottom() { if (messagesContainer.value) messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight }
+
+async function tick() { await messageStore.refresh() }
+
+onMounted(async () => {
+  messageStore.init()
+  await loadFarmers()
+  tick()
+  refreshTimer = setInterval(tick, 10000)
+})
+onUnmounted(() => {
+  if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null }
+  if (chatTimer) { clearInterval(chatTimer); chatTimer = null }
+})
 </script>
 
 <template>
@@ -75,24 +156,58 @@ function clearPollTimer() { if (pollTimer) { clearInterval(pollTimer); pollTimer
     <div class="page-head">
       <div>
         <h2 class="page-title">联系农户</h2>
-        <p class="page-sub">查看农户信息，直接与农户沟通</p>
+        <p class="page-sub">与农户在线沟通；收到新消息的农户会自动置顶并标红</p>
       </div>
     </div>
 
     <el-card shadow="never" v-loading="loading">
-      <template #header><strong>意向农户列表</strong></template>
-      <div v-if="farmers.length === 0" style="text-align:center;padding:40px 0">
-        <el-empty description="暂无农户数据" :image-size="80" />
-      </div>
-      <div v-for="f in farmers" :key="f.userName" class="farmer-card">
-        <div class="farmer-info">
-          <div class="farmer-avatar">👨‍🌾</div>
-          <div>
-            <div class="farmer-name">{{ f.realName || f.nickName || f.userName }}</div>
-            <div class="farmer-detail">{{ f.nickName || f.userName }} · {{ f.phone || '暂无电话' }} · {{ f.address || '地址未填写' }}</div>
-          </div>
+      <template #header>
+        <div class="card-header-row">
+          <el-radio-group v-model="activeTab">
+            <el-radio-button value="contacted">
+              已联系农户 ({{ contactedFarmers.length }})<span v-if="contactedUnread > 0" class="tab-red-dot"></span>
+            </el-radio-button>
+            <el-radio-button value="contactable">可联系农户 ({{ contactableFarmers.length }})</el-radio-button>
+          </el-radio-group>
+          <el-input v-model="keyword" placeholder="搜索姓名 / 手机号 / 地址" clearable style="width:240px" :prefix-icon="Search" />
         </div>
-        <el-button type="primary" size="small" @click="openChat(f)">联系</el-button>
+      </template>
+
+      <el-empty v-if="!pagedList.length" :description="activeTab === 'contacted' ? '暂无已联系农户，请前往可联系农户发起沟通' : '暂无可联系农户'" :image-size="80" />
+
+      <div v-else class="farmer-list">
+        <div
+          v-for="f in pagedList"
+          :key="f.userName"
+          class="farmer-card"
+          :class="{ 'has-unread': f.unreadCount > 0 }"
+        >
+          <div class="farmer-info">
+            <div class="farmer-avatar">👨‍🌾</div>
+            <div class="farmer-text">
+              <div class="farmer-name">
+                {{ f.realName || f.nickName || f.userName }}
+                <el-badge v-if="f.unreadCount > 0" :value="f.unreadCount" :max="99" type="danger" class="name-badge" />
+              </div>
+              <div class="farmer-detail">{{ f.nickName || f.userName }} · {{ f.phone || '暂无电话' }} · {{ f.address || '地址未填写' }}</div>
+              <div v-if="f.lastContent" class="farmer-last">最新消息：{{ f.lastContent }}<span v-if="f.lastTime"> · {{ formatLast(f.lastTime) }}</span></div>
+            </div>
+          </div>
+          <el-button :type="f.unreadCount > 0 ? 'danger' : 'primary'" size="small" @click="openChat(f)">
+            {{ f.unreadCount > 0 ? '查看消息' : '联系' }}
+          </el-button>
+        </div>
+      </div>
+
+      <div v-if="total > pageSize" class="pager">
+        <el-pagination
+          :current-page="page"
+          :page-size="pageSize"
+          :total="total"
+          layout="total, prev, pager, next"
+          background
+          @current-change="(p) => (page = p)"
+        />
       </div>
     </el-card>
 
@@ -118,16 +233,32 @@ function clearPollTimer() { if (pollTimer) { clearInterval(pollTimer); pollTimer
 </template>
 
 <style scoped>
-.contacts-page { max-width: 1000px; }
+.contacts-page { max-width: 1000px; margin: 0 auto; }
 .page-head { margin-bottom: 24px; }
 .page-title { font-size: 24px; font-weight: 800; color: var(--green-deep); margin: 0 0 4px; }
 .page-sub { font-size: 14px; color: var(--text-muted); margin: 0; }
-.farmer-card { display: flex; align-items: center; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid var(--border); }
+
+.card-header-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.tab-red-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--el-color-danger, #f56c6c); margin-left: 6px; vertical-align: middle; }
+
+.farmer-list { display: flex; flex-direction: column; }
+.farmer-card {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 12px; border-bottom: 1px solid var(--border); border-left: 4px solid transparent;
+  transition: background 0.2s;
+}
 .farmer-card:last-child { border: none; }
-.farmer-info { display: flex; align-items: center; gap: 12px; }
-.farmer-avatar { font-size: 36px; }
-.farmer-name { font-weight: 600; color: var(--text); font-size: 15px; }
+.farmer-card.has-unread { background: #fef0f0; border-left-color: var(--el-color-danger, #f56c6c); border-radius: 6px; }
+.farmer-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.farmer-avatar { font-size: 36px; flex-shrink: 0; }
+.farmer-text { min-width: 0; }
+.farmer-name { font-weight: 600; color: var(--text); font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.name-badge { margin-left: 4px; }
 .farmer-detail { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+.farmer-last { font-size: 12px; color: var(--el-color-danger, #f56c6c); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 520px; }
+
+.pager { display: flex; justify-content: flex-end; margin-top: 16px; }
+
 .chat-messages { max-height: 400px; overflow-y: auto; padding: 12px 0; }
 .message-row { display: flex; flex-direction: column; margin-bottom: 12px; }
 .message-row.sent { align-items: flex-end; }

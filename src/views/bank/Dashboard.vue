@@ -8,7 +8,7 @@ import ProfileCard from '../../components/ProfileCard.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
-const userName = computed(() => userStore.nickName || userStore.userInfo?.userName || '')
+const userName = computed(() => userStore.userInfo?.userName || '')
 
 const loading = ref(false)
 const stats = reactive({ totalPending: 0, todayProcessed: 0, activeProducts: 0, monthlyTotal: '¥0' })

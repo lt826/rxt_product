@@ -12,8 +12,7 @@ const loading = ref(false)
 const stats = ref([
   { label: '在售商品', value: 0, icon: 'Goods', color: '#409eff', bg: 'linear-gradient(135deg, #409eff, #79b8ff)' },
   { label: '收购需求', value: 0, icon: 'Document', color: '#67c23a', bg: 'linear-gradient(135deg, #67c23a, #95d675)' },
-  { label: '待联系农户', value: 0, icon: 'User', color: '#e6a23c', bg: 'linear-gradient(135deg, #e6a23c, #f7d08e)' },
-  { label: '可联系融资', value: 0, icon: 'Coin', color: '#f56c6c', bg: 'linear-gradient(135deg, #f56c6c, #fba0a0)' }
+  { label: '待联系农户', value: 0, icon: 'User', color: '#e6a23c', bg: 'linear-gradient(135deg, #e6a23c, #f7d08e)' }
 ])
 
 const matches = ref([])
@@ -31,8 +30,7 @@ async function loadDashboard() {
       stats.value = [
         { label: '在售商品', value: data.productCount || 0, icon: 'Goods', color: '#409eff', bg: 'linear-gradient(135deg, #409eff, #79b8ff)' },
         { label: '收购需求', value: data.demandCount || 0, icon: 'Document', color: '#67c23a', bg: 'linear-gradient(135deg, #67c23a, #95d675)' },
-        { label: '待联系农户', value: data.farmerCount || 0, icon: 'User', color: '#e6a23c', bg: 'linear-gradient(135deg, #e6a23c, #f7d08e)' },
-        { label: '可联系融资', value: data.financingProductCount || 0, icon: 'Coin', color: '#f56c6c', bg: 'linear-gradient(135deg, #f56c6c, #fba0a0)' }
+        { label: '待联系农户', value: data.farmerCount || 0, icon: 'User', color: '#e6a23c', bg: 'linear-gradient(135deg, #e6a23c, #f7d08e)' }
       ]
     }
 
@@ -131,7 +129,7 @@ onMounted(loadDashboard)
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-bottom: 32px;
 }

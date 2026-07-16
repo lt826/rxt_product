@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '../stores/user'
+import { useMessageStore } from '../stores/message'
 import { ElMessageBox } from 'element-plus'
 import { Bell, ArrowDown } from '@element-plus/icons-vue'
 import { getUnreadNotificationCountAPI, getMyNotificationsAPI, markNotificationReadAPI } from '../api/notification'
@@ -9,6 +10,7 @@ import { getUnreadNotificationCountAPI, getMyNotificationsAPI, markNotificationR
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const messageStore = useMessageStore()
 
 const headerNavRef = ref(null)
 const activeDropdown = ref(null)
@@ -27,6 +29,17 @@ const ROLE_TITLE = {
   farmer: '农户端', buyer: '买家端', bank: '银行端', expert: '专家端', admin: '平台管理端'
 }
 const roleTitle = computed(() => ROLE_TITLE[role.value] || '个人中心')
+
+// 未读私信红点：农户端"消息通知"、买家端"联系农户"Tab 显示红色徽标
+const msgUnread = computed(() => messageStore.totalUnread)
+const messageBadgePath = computed(() => {
+  if (role.value === 'farmer') return '/farmer/messages'
+  if (role.value === 'buyer') return '/buyer/contacts'
+  return null
+})
+function tabHasBadge(item) {
+  return !!item.path && item.path === messageBadgePath.value && msgUnread.value > 0
+}
 
 const ROLE_MENU_MAP = {
   farmer: [
@@ -87,7 +100,6 @@ const ROLE_MENU_MAP = {
     { path: '/admin/dashboard', label: '首页', icon: 'HomeFilled' },
     { path: '/admin/users', label: '用户管理', icon: 'UserFilled' },
     { path: '/admin/goods', label: '商品管理', icon: 'Goods' },
-    { path: '/admin/config', label: '系统配置', icon: 'Setting' },
     { path: '/admin/stats', label: '数据统计', icon: 'DataAnalysis' }
   ]
 }
@@ -190,9 +202,19 @@ function formatNotifTime(t) {
   return String(t).replace('T', ' ').substring(0, 16)
 }
 
+// 仅农户/买家有私信功能，其余角色不轮询消息接口（避免无权限 403）
+const hasMessageFeature = computed(() => role.value === 'farmer' || role.value === 'buyer')
+
 onMounted(() => {
   loadUnread()
-  notifTimer = setInterval(loadUnread, 15000)
+  if (hasMessageFeature.value) {
+    messageStore.init()
+    messageStore.refresh()
+  }
+  notifTimer = setInterval(() => {
+    loadUnread()
+    if (hasMessageFeature.value) messageStore.refresh()
+  }, 15000)
   document.addEventListener('click', handleClickOutside)
 })
 onUnmounted(() => {
@@ -223,8 +245,12 @@ onUnmounted(() => {
             :class="{ active: isTabActive(item) }"
             @click="!item.children ? navigate(item.path) : toggleDropdown(item)"
           >
-            <el-icon><component :is="item.icon" /></el-icon>
-            <span>{{ item.label }}</span>
+            <el-badge :value="msgUnread" :max="99" :hidden="!tabHasBadge(item)" type="danger" class="nav-tab-badge">
+              <div class="nav-tab-inner">
+                <el-icon><component :is="item.icon" /></el-icon>
+                <span>{{ item.label }}</span>
+              </div>
+            </el-badge>
             <el-icon v-if="item.children" class="dropdown-arrow"><ArrowDown /></el-icon>
             <!-- Dropdown submenu -->
             <transition name="dropdown">
@@ -382,6 +408,14 @@ onUnmounted(() => {
 }
 .nav-tab .el-icon {
   font-size: 16px;
+}
+.nav-tab-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.nav-tab-badge :deep(.el-badge__content) {
+  transform: translateY(-2px) translateX(14px);
 }
 .dropdown-arrow {
   font-size: 12px;

@@ -76,9 +76,9 @@ onMounted(() => { if (props.userName) loadUserInfo() })
 <template>
   <el-card v-loading="loading" class="profile-card" shadow="never">
     <template #header>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-weight:600;color:var(--green-deep)">个人信息</span>
-        <div style="display:flex;gap:8px">
+      <div class="profile-header">
+        <span class="profile-title">个人信息</span>
+        <div class="profile-actions">
           <el-button v-if="!editMode" size="small" @click="startEdit">编辑</el-button>
           <template v-else>
             <el-button size="small" @click="cancelEdit">取消</el-button>
@@ -88,71 +88,76 @@ onMounted(() => { if (props.userName) loadUserInfo() })
       </div>
     </template>
 
-    <el-form v-if="userInfo" label-width="90px" class="profile-form">
+    <!-- 查看模式：用 descriptions 保证字段整齐对齐 -->
+    <el-descriptions v-if="userInfo && !editMode" :column="2" border class="profile-desc">
+      <el-descriptions-item label="用户名">{{ userInfo.userName || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="昵称">{{ userInfo.nickName || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="真实姓名">{{ userInfo.realName || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="手机号">{{ userInfo.phone || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="身份证号">{{ userInfo.identityNum || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="角色">
+        <el-tag size="small" type="success">{{ userInfo.role || '-' }}</el-tag>
+      </el-descriptions-item>
+      <el-descriptions-item label="地址" :span="2">{{ userInfo.address || '-' }}</el-descriptions-item>
+      <el-descriptions-item label="状态" :span="2">
+        <el-tag v-if="userInfo.status === 'approved'" size="small" type="success">已通过</el-tag>
+        <el-tag v-else-if="userInfo.status === 'pending'" size="small" type="warning">待审批</el-tag>
+        <el-tag v-else-if="userInfo.status === 'rejected'" size="small" type="danger">已拒绝</el-tag>
+        <span v-else>{{ userInfo.status || '-' }}</span>
+      </el-descriptions-item>
+    </el-descriptions>
+
+    <!-- 编辑模式 -->
+    <el-form v-else-if="userInfo && editMode" label-width="90px" class="profile-form">
       <el-row :gutter="20">
         <el-col :span="12">
-          <el-form-item label="用户名">
-            <el-input v-if="editMode" v-model="form.userName" />
-            <span v-else>{{ userInfo.userName || '-' }}</span>
-          </el-form-item>
+          <el-form-item label="用户名"><el-input v-model="form.userName" /></el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="昵称">
-            <el-input v-if="editMode" v-model="form.nickName" />
-            <span v-else>{{ userInfo.nickName || '-' }}</span>
-          </el-form-item>
+          <el-form-item label="昵称"><el-input v-model="form.nickName" /></el-form-item>
         </el-col>
       </el-row>
       <el-row :gutter="20">
         <el-col :span="12">
-          <el-form-item label="真实姓名">
-            <el-input v-if="editMode" v-model="form.realName" />
-            <span v-else>{{ userInfo.realName || '-' }}</span>
-          </el-form-item>
+          <el-form-item label="真实姓名"><el-input v-model="form.realName" /></el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="手机号">
-            <el-input v-if="editMode" v-model="form.phone" />
-            <span v-else>{{ userInfo.phone || '-' }}</span>
-          </el-form-item>
+          <el-form-item label="手机号"><el-input v-model="form.phone" /></el-form-item>
         </el-col>
       </el-row>
       <el-row :gutter="20">
         <el-col :span="12">
-          <el-form-item label="身份证号">
-            <el-input v-if="editMode" v-model="form.identityNum" />
-            <span v-else>{{ userInfo.identityNum || '-' }}</span>
-          </el-form-item>
+          <el-form-item label="身份证号"><el-input v-model="form.identityNum" /></el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item label="地址">
-            <el-input v-if="editMode" v-model="form.address" />
-            <span v-else>{{ userInfo.address || '-' }}</span>
-          </el-form-item>
-        </el-col>
-      </el-row>
-      <el-row :gutter="20">
-        <el-col :span="12">
-          <el-form-item label="角色">
-            <el-tag size="small" type="success">{{ userInfo.role || '-' }}</el-tag>
-          </el-form-item>
-        </el-col>
-        <el-col :span="12">
-          <el-form-item label="状态">
-            <el-tag v-if="userInfo.status === 'approved'" size="small" type="success">已通过</el-tag>
-            <el-tag v-else-if="userInfo.status === 'pending'" size="small" type="warning">待审批</el-tag>
-            <el-tag v-else-if="userInfo.status === 'rejected'" size="small" type="danger">已拒绝</el-tag>
-            <span v-else>{{ userInfo.status || '-' }}</span>
-          </el-form-item>
+          <el-form-item label="地址"><el-input v-model="form.address" /></el-form-item>
         </el-col>
       </el-row>
     </el-form>
+
     <el-empty v-else description="暂无用户信息" :image-size="80" />
   </el-card>
 </template>
 
 <style scoped>
 .profile-card { margin-bottom: 20px; }
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.profile-title { font-weight: 600; color: var(--green-deep); }
+.profile-actions { display: flex; gap: 8px; }
+
+/* descriptions：统一标签列宽 + 基线对齐，杜绝"用户名/昵称对不齐" */
+.profile-desc :deep(.el-descriptions__label) {
+  width: 100px;
+  min-width: 100px;
+  font-weight: 600;
+}
+.profile-desc :deep(.el-descriptions__cell) {
+  vertical-align: middle;
+}
+
 .profile-form .el-form-item { margin-bottom: 18px; }
-.profile-form span { display: inline-block; padding: 6px 0; color: var(--text-secondary); font-size: 14px; }
 </style>

@@ -9,6 +9,8 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const role = computed(() => userStore.role)
+// 仅农户拥有信誉分，其他角色（买家/银行/专家/管理员）不展示
+const isFarmer = computed(() => role.value === 'farmer')
 const loading = ref(false)
 // 完整资料（含 realName / phone / address / avatar / credit 等），登录返回的 LoginVO 不含这些字段，需单独拉取
 const profile = ref({})
@@ -100,7 +102,7 @@ function def(v) { return (v === null || v === undefined || v === '') ? '-' : v }
           <h3>欢迎回来，{{ nickName }}</h3>
           <p class="muted">角色：{{ roleLabel }}</p>
         </div>
-        <div class="welcome-credit">
+        <div v-if="isFarmer" class="welcome-credit">
           <span class="credit-label">信誉分</span>
           <el-tag :type="creditType" size="large" effect="dark" round>{{ credit }}</el-tag>
         </div>
@@ -121,7 +123,7 @@ function def(v) { return (v === null || v === undefined || v === '') ? '-' : v }
             <span class="avatar-fallback">{{ initial }}</span>
           </el-avatar>
         </el-descriptions-item>
-        <el-descriptions-item label="信誉分">
+        <el-descriptions-item v-if="isFarmer" label="信誉分">
           <el-tag :type="creditType" effect="light">{{ credit }}</el-tag>
         </el-descriptions-item>
       </el-descriptions>

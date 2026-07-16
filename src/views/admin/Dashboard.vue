@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
-import { getStatsOverviewAPI, getUserGrowthAPI } from '../../api/admin'
+import { getStatsOverviewAPI, getUserGrowthAPI, getUsersAPI } from '../../api/admin'
 import { useUserStore } from '../../stores/user'
 
 const router = useRouter()
@@ -79,15 +79,46 @@ function handleResize() {
   if (chartInstance) chartInstance.resize()
 }
 
+// 用户记录缓存：后端 user-growth 接口无数据时，按注册时间在前端汇总增长
+const allUserRecords = ref(null)
+async function fetchAllUsers() {
+  if (allUserRecords.value) return allUserRecords.value
+  try {
+    const res = await getUsersAPI({ page: 1, size: 9999 })
+    allUserRecords.value = (res && res.code === 200 && res.data) ? (res.data.records || []) : []
+  } catch { allUserRecords.value = [] }
+  return allUserRecords.value
+}
+// 按注册时间汇总：day→YYYY-MM-DD，month→YYYY-MM，year→YYYY
+function groupGrowth(records, mode) {
+  const buckets = {}
+  records.forEach(u => {
+    const t = u && u.createTime
+    if (!t) return
+    const ds = String(t).replace('T', ' ').substring(0, 10)
+    const key = mode === 'year' ? ds.substring(0, 4) : mode === 'day' ? ds : ds.substring(0, 7)
+    if (!buckets[key]) buckets[key] = { date: key, count: 0 }
+    buckets[key].count++
+  })
+  return Object.values(buckets).sort((a, b) => a.date.localeCompare(b.date))
+}
+
 async function loadGrowthData() {
   growthLoading.value = true
   try {
-    const res = await getUserGrowthAPI(growthMode.value)
-    if (res.code === 200 && res.data) {
-      growthData.value = res.data
+    let data = []
+    try {
+      const res = await getUserGrowthAPI(growthMode.value)
+      if (res && res.code === 200 && Array.isArray(res.data) && res.data.length > 0) data = res.data
+    } catch { /* 接口失败则走前端汇总 */ }
+    if (!data.length) {
+      const records = await fetchAllUsers()
+      data = groupGrowth(records, growthMode.value)
     }
-  } catch { /* ignore */ }
-  finally { growthLoading.value = false }
+    growthData.value = data
+  } finally {
+    growthLoading.value = false
+  }
 }
 
 async function onModeChange(mode) {
