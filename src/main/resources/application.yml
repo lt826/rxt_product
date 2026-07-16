@@ -11,6 +11,12 @@ spring:
   jackson:
     time-zone: GMT+8
 
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 10MB
+
   data:
     redis:
       port: 6379
@@ -31,3 +37,8 @@ mybatis-plus:
 jwt:
   secret: MojuanSecretKey2026!@#YourVeryLongSecretStringToGenerateToken
   expiration: 86400000
+
+# 文件上传配置（本地存储目录，相对于运行目录）
+app:
+  upload:
+    dir: ./uploads

@@ -1,16 +1,19 @@
 package com.qst.crop.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.qst.crop.dao.AddressMapper;
 import com.qst.crop.dao.GoodsMapper;
 import com.qst.crop.dao.PurchaseDetailMapper;
 import com.qst.crop.dao.PurchaseMapper;
 import com.qst.crop.dao.SellPurchaseMapper;
+import com.qst.crop.dao.UserMapper;
 import com.qst.crop.entity.Address;
 import com.qst.crop.entity.Goods;
 import com.qst.crop.entity.Purchase;
 import com.qst.crop.entity.PurchaseDetail;
 import com.qst.crop.entity.SellPurchase;
+import com.qst.crop.entity.User;
 import com.qst.crop.model.CreateOrderDTO;
 import com.qst.crop.model.OrderItemVO;
 import com.qst.crop.model.OrderVO;
@@ -44,6 +47,8 @@ public class PurchaseServiceImpl implements PurchaseService {
     private AddressMapper addressMapper;
     @Autowired
     private GoodsMapper goodsMapper;
+    @Autowired
+    private UserMapper userMapper;
     @Autowired
     private NotificationService notificationService;
 
@@ -210,12 +215,14 @@ public class PurchaseServiceImpl implements PurchaseService {
         if (p == null || !buyerName.equals(p.getOwnName())) {
             return false;
         }
+        // 幂等：仅当订单尚未"已收货"时才发放信誉分并通知，避免重复点击/重放导致农户信誉分被多次累加
+        boolean firstReceive = p.getPurchaseStatus() == null || p.getPurchaseStatus() != 4;
         LocalDateTime now = LocalDateTime.now();
         p.setPurchaseStatus(4); // 已收货
         p.setUpdateTime(now);
         purchaseMapper.updateById(p);
 
-        // 同步卖家侧订单状态并通知卖家
+        // 同步卖家侧订单状态
         List<SellPurchase> sells = sellPurchaseMapper.selectList(
                 new QueryWrapper<SellPurchase>().eq("purchase_id", purchaseId));
         Set<String> sellers = new HashSet<>();
@@ -227,11 +234,25 @@ public class PurchaseServiceImpl implements PurchaseService {
                 sellers.add(sp.getOwnName());
             }
         }
-        for (String seller : sellers) {
-            notificationService.send(seller, "买家已确认收货",
-                    "订单 #" + purchaseId + " 买家已确认收货", "order", purchaseId);
+        // 首次确认收货：交易完成，给每个农户（卖家）信誉分 +2 并通知
+        if (firstReceive) {
+            for (String seller : sellers) {
+                rewardCredit(seller, 2);
+                notificationService.send(seller, "买家已确认收货",
+                        "订单 #" + purchaseId + " 买家已确认收货，您的信誉分 +2", "order", purchaseId);
+            }
         }
         return true;
+    }
+
+    /** 增加用户信誉分：使用 SQL 原子自增，避免并发丢失更新；credit 为 NULL 时按 0 计算 */
+    private void rewardCredit(String userName, int delta) {
+        if (userName == null || delta == 0) {
+            return;
+        }
+        userMapper.update(null, new UpdateWrapper<User>()
+                .eq("user_name", userName)
+                .setSql("credit = IFNULL(credit, 0) + " + delta));
     }
 
     /** 组装商品明细；goodsId 非空时只取该商品（卖家视角），为空时取整单全部（买家视角） */

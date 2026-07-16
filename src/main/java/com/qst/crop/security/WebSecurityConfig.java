@@ -40,6 +40,9 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/v1/user/login").permitAll()
                         .requestMatchers("/api/v1/user/register").permitAll()
 
+                        // 上传的图片静态资源：允许匿名访问（未登录浏览商品列表时图片也要能展示）
+                        .requestMatchers("/uploads/**").permitAll()
+
                         // 商品浏览：所有用户都可以访问（包括未登录）
                         .requestMatchers("/api/v1/goods/list").permitAll()
                         .requestMatchers("/api/v1/goods/detail/**").permitAll()
