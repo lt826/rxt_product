@@ -7,7 +7,6 @@ import com.qst.crop.entity.PartnerInvitation;
 import com.qst.crop.entity.User;
 import com.qst.crop.model.InvitationVO;
 import com.qst.crop.model.PartnerInvitationDTO;
-import com.qst.crop.service.MessageService;
 import com.qst.crop.service.NotificationService;
 import com.qst.crop.service.PartnerInvitationService;
 import lombok.extern.slf4j.Slf4j;
@@ -33,9 +32,6 @@ public class PartnerInvitationServiceImpl implements PartnerInvitationService {
 
     @Autowired
     private NotificationService notificationService;
-
-    @Autowired
-    private MessageService messageService;
 
     @Override
     public PartnerInvitation sendInvitation(String applicantUserName, PartnerInvitationDTO dto) {
@@ -75,18 +71,12 @@ public class PartnerInvitationServiceImpl implements PartnerInvitationService {
         invitationMapper.insert(invitation);
         log.info("联合贷款人邀请已发送: applicant={}, invitee={}", applicantUserName, invitee.getUserName());
 
-        // 发送通知给被邀请人
+        // 发送通知给被邀请人（左上角铃铛通知即可，不再重复写入消息通知板块）
         String title = "联合贷款邀请";
         String content = String.format("农户 %s 邀请您作为联合贷款人，项目描述：%s",
             applicant != null ? applicant.getRealName() : applicantUserName,
             dto.getProjectDescription());
         notificationService.send(invitee.getUserName(), title, content, "partner_invitation", invitation.getId());
-
-        // 发送站内消息
-        String msgContent = String.format("您好，%s 邀请您作为联合贷款人共同申请融资。项目描述：%s。请前往「联合贷款邀请」查看并选择同意或拒绝。",
-            applicant != null ? applicant.getRealName() : applicantUserName,
-            dto.getProjectDescription());
-        messageService.sendMessage(applicantUserName, invitee.getUserName(), msgContent);
 
         return invitation;
     }
@@ -160,7 +150,7 @@ public class PartnerInvitationServiceImpl implements PartnerInvitationService {
         invitationMapper.updateById(invitation);
         log.info("联合贷款人邀请已回复: invitationId={}, status={}", invitationId, status);
 
-        // 发送通知给申请人
+        // 发送通知给申请人（左上角铃铛通知即可，不再重复写入消息通知板块）
         String statusText = status == 1 ? "同意" : "拒绝";
         String title = "联合贷款邀请已被" + statusText;
         String content = String.format("您发送给 %s 的联合贷款邀请已被%s",
@@ -169,13 +159,6 @@ public class PartnerInvitationServiceImpl implements PartnerInvitationService {
             content += "，备注：" + remark;
         }
         notificationService.send(invitation.getApplicantUserName(), title, content, "partner_reply", invitationId);
-
-        // 发送站内消息
-        String msgContent = String.format("您好，%s 已%s您的联合贷款邀请", invitation.getInviteeRealName(), statusText);
-        if (remark != null && !remark.isEmpty()) {
-            msgContent += "，备注：" + remark;
-        }
-        messageService.sendMessage(invitation.getInviteeUserName(), invitation.getApplicantUserName(), msgContent);
 
         return true;
     }

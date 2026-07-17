@@ -1,9 +1,12 @@
 package com.qst.crop.controller;
 
+import com.qst.crop.common.ProfileCheck;
 import com.qst.crop.common.Result;
 import com.qst.crop.entity.Goods;
+import com.qst.crop.entity.User;
 import com.qst.crop.security.SecurityUtil;
 import com.qst.crop.service.GoodsService;
+import com.qst.crop.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +18,9 @@ public class GoodsController {
 
     @Autowired
     private GoodsService goodsService;
+
+    @Autowired
+    private UserService userService;
 
     @GetMapping("/list")
     public Result<List<Goods>> list(
@@ -48,7 +54,14 @@ public class GoodsController {
 
     @PostMapping("/publish")
     public Result<Goods> publish(@RequestBody Goods goods) {
-        goods.setOwnName(SecurityUtil.getCurrentUsername());
+        String username = SecurityUtil.getCurrentUsername();
+        // 农户发布商品前，必须已完善手机号和地址，方便买家联系与发货
+        User user = userService.getUserByUserName(username);
+        if (user != null && "farmer".equalsIgnoreCase(user.getRole())
+                && !ProfileCheck.contactComplete(user)) {
+            return Result.error(400, "请先在「个人中心-基本信息」中填写手机号和地址后再发布商品");
+        }
+        goods.setOwnName(username);
         return Result.success("发布成功", goodsService.publish(goods));
     }
 

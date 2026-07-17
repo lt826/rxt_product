@@ -1,10 +1,13 @@
 package com.qst.crop.controller;
 
+import com.qst.crop.common.ProfileCheck;
 import com.qst.crop.common.Result;
+import com.qst.crop.entity.User;
 import com.qst.crop.model.CreateOrderDTO;
 import com.qst.crop.model.OrderVO;
 import com.qst.crop.model.ShipDTO;
 import com.qst.crop.service.PurchaseService;
+import com.qst.crop.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +26,9 @@ public class PurchaseController {
 
     @Autowired
     private PurchaseService purchaseService;
+
+    @Autowired
+    private UserService userService;
 
     /** 买家下单 */
     @PostMapping
@@ -51,6 +57,11 @@ public class PurchaseController {
     /** 农户发货：填写物流信息并把状态改为待收货 */
     @PutMapping("/{id}/ship")
     public Result<Boolean> ship(@PathVariable Integer id, @RequestBody ShipDTO dto, Authentication auth) {
+        // 发货前，农户必须已完善手机号和地址，方便买家联系与物流配送
+        User user = userService.getUserByUserName(auth.getName());
+        if (!ProfileCheck.contactComplete(user)) {
+            return Result.error(400, "请先在「个人中心-基本信息」中填写手机号和地址后再发货");
+        }
         boolean ok = purchaseService.ship(id, auth.getName(), dto);
         return ok ? Result.success("发货成功", true) : Result.error(404, "订单不存在或无权操作");
     }
