@@ -5,6 +5,7 @@ import com.qst.crop.dao.FinancingProductMapper;
 import com.qst.crop.entity.FinancingProduct;
 import com.qst.crop.model.ProductDTO;
 import com.qst.crop.service.FinancingProductService;
+import com.qst.crop.service.NotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,9 @@ public class FinancingProductServiceImpl implements FinancingProductService {
 
     @Autowired
     private FinancingProductMapper productMapper;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Override
     public FinancingProduct create(Integer bankId, ProductDTO dto) {
@@ -40,6 +44,14 @@ public class FinancingProductServiceImpl implements FinancingProductService {
         product.setUpdateTime(now);
         productMapper.insert(product);
         log.info("融资产品已创建: bankId={}, productId={}", bankId, product.getId());
+        // 通知所有农户有新的融资产品
+        try {
+            String name = product.getName() != null ? product.getName() : "新融资产品";
+            notificationService.sendToRole("farmer", "新增融资产品消息",
+                    "有新的融资产品《" + name + "》发布，快去看看是否适合您。", "finance_product_new", product.getId());
+        } catch (Exception e) {
+            log.warn("融资产品通知发送失败: {}", e.getMessage());
+        }
         return product;
     }
 

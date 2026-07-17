@@ -4,17 +4,23 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.qst.crop.dao.KnowledgeMapper;
 import com.qst.crop.entity.Knowledge;
 import com.qst.crop.service.KnowledgeService;
+import com.qst.crop.service.NotificationService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 public class KnowledgeServiceImpl implements KnowledgeService {
 
     @Autowired
     private KnowledgeMapper knowledgeMapper;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Override
     public List<Knowledge> list(String keyword) {
@@ -37,6 +43,14 @@ public class KnowledgeServiceImpl implements KnowledgeService {
         knowledge.setCreateTime(now);
         knowledge.setUpdateTime(now);
         knowledgeMapper.insert(knowledge);
+        // 通知所有农户有新的农业知识
+        try {
+            String title = knowledge.getTitle() != null ? knowledge.getTitle() : "新知识";
+            notificationService.sendToRole("farmer", "农业知识增加",
+                    "有新的农业知识《" + title + "》发布，快去学习吧。", "knowledge_new", knowledge.getKnowledgeId());
+        } catch (Exception e) {
+            log.warn("农业知识通知发送失败: {}", e.getMessage());
+        }
         return knowledge;
     }
 

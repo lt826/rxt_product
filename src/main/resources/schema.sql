@@ -59,6 +59,27 @@ CREATE TABLE tb_question (
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='在线问答表';
 
+CREATE TABLE tb_question_message (
+    id          INT          NOT NULL AUTO_INCREMENT COMMENT '消息id',
+    question_id INT          NOT NULL COMMENT '所属问题id',
+    sender      VARCHAR(50)  NOT NULL COMMENT '发送者用户名',
+    sender_role VARCHAR(20)  DEFAULT NULL COMMENT '发送者角色(farmer/expert)',
+    content     TEXT         NOT NULL COMMENT '消息内容',
+    create_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    INDEX idx_question (question_id, create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='问答对话消息表';
+
+CREATE TABLE tb_follow (
+    id          INT          NOT NULL AUTO_INCREMENT COMMENT 'id',
+    follower    VARCHAR(50)  NOT NULL COMMENT '关注者(买家用户名)',
+    followee    VARCHAR(50)  NOT NULL COMMENT '被关注者(农户用户名)',
+    create_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_follow (follower, followee),
+    INDEX idx_followee (followee)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户关注关系表';
+
 -- ==============================================
 -- 4. 专家预约表
 -- ==============================================

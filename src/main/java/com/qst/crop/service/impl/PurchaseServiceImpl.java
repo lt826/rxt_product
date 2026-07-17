@@ -115,6 +115,13 @@ public class PurchaseServiceImpl implements PurchaseService {
                 notificationService.send(sellerName, "您有新的订单", content, "order", purchaseId);
             }
         }
+        // 通知买家下单/付款成功（本系统下单即进入待发货，无独立支付环节）
+        try {
+            notificationService.send(buyerName, "付款成功",
+                    "您的订单 #" + purchaseId + " 已成功提交，合计 ¥"
+                            + (dto.getTotalPrice() != null ? dto.getTotalPrice() : BigDecimal.ZERO)
+                            + "，等待卖家发货。", "order", purchaseId);
+        } catch (Exception ignore) { }
         return purchaseId;
     }
 
@@ -240,7 +247,14 @@ public class PurchaseServiceImpl implements PurchaseService {
                 rewardCredit(seller, 2);
                 notificationService.send(seller, "买家已确认收货",
                         "订单 #" + purchaseId + " 买家已确认收货，您的信誉分 +2", "order", purchaseId);
+                notificationService.send(seller, "信誉分增加通知",
+                        "因订单 #" + purchaseId + " 交易完成，您的信誉分 +2，当前信誉分提升中。", "credit_increase", purchaseId);
             }
+            // 通知买家订单已完成
+            try {
+                notificationService.send(buyerName, "订单已完成",
+                        "您的订单 #" + purchaseId + " 已确认收货，交易完成。", "order", purchaseId);
+            } catch (Exception ignore) { }
         }
         return true;
     }

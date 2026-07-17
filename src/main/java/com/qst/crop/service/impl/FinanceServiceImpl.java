@@ -187,6 +187,15 @@ public class FinanceServiceImpl implements FinanceService {
         financeMapper.insert(finance);
         log.info("融资申请已提交: userName={}, financeId={}, productId={}",
             userName, finance.getFinanceId(), dto.getProductId());
+        // 通知所有银行端有新的融资审批待处理
+        try {
+            String applicant = finance.getRealName() != null ? finance.getRealName() : userName;
+            BigDecimal money = finance.getMoney() != null ? finance.getMoney() : BigDecimal.ZERO;
+            String content = String.format("用户「%s」提交了一笔融资金额 ¥%,.2f 的申请，请前往审批。", applicant, money);
+            notificationService.sendToRole("bank", "融资审批待处理", content, "finance_apply", finance.getFinanceId());
+        } catch (Exception e) {
+            log.warn("融资申请通知发送失败: {}", e.getMessage());
+        }
         return finance;
     }
 

@@ -6,6 +6,7 @@ import com.qst.crop.dao.ExpertMapper;
 import com.qst.crop.entity.Appointment;
 import com.qst.crop.entity.Expert;
 import com.qst.crop.service.AppointmentService;
+import com.qst.crop.service.NotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,9 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Autowired
     private ExpertMapper expertMapper;
 
+    @Autowired
+    private NotificationService notificationService;
+
     @Override
     public Appointment createAppointment(Appointment appointment) {
         // 获取专家真实姓名
@@ -39,6 +43,18 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setStatus("pending");
 
         appointmentMapper.insert(appointment);
+        // 通知专家有新的预约待处理
+        if (appointment.getExpertName() != null) {
+            try {
+                String farmer = appointment.getFarmerName() != null ? appointment.getFarmerName() : "农户";
+                String when = appointment.getAppointmentTime() != null
+                        ? String.valueOf(appointment.getAppointmentTime()).replace("T", " ") : "未指定时间";
+                String content = "农户「" + farmer + "」预约了您（时间：" + when + "），请前往处理。";
+                notificationService.send(appointment.getExpertName(), "新增预约待处理", content, "appointment_new", appointment.getId());
+            } catch (Exception e) {
+                log.warn("预约通知发送失败: {}", e.getMessage());
+            }
+        }
         return appointment;
     }
 
@@ -74,6 +90,19 @@ public class AppointmentServiceImpl implements AppointmentService {
         appointment.setUpdateTime(LocalDateTime.now());
 
         appointmentMapper.updateById(appointment);
+        // 通知农户预约处理结果
+        if (appointment.getFarmerName() != null) {
+            try {
+                String title = approved ? "预约已通过" : "预约已拒绝";
+                String result = approved ? "已通过，请按约定时间等候专家。" : "已被拒绝。";
+                String tail = (reply != null && !reply.trim().isEmpty()) ? ("专家回复：" + reply) : "";
+                String content = ("您对专家「" + (appointment.getExpertRealName() != null ? appointment.getExpertRealName() : appointment.getExpertName())
+                        + "」的预约" + result + (tail.isEmpty() ? "" : ("\n" + tail)));
+                notificationService.send(appointment.getFarmerName(), "预约结果通知", content, "appointment_result", appointment.getId());
+            } catch (Exception e) {
+                log.warn("预约结果通知发送失败: {}", e.getMessage());
+            }
+        }
         return appointment;
     }
 

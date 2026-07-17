@@ -9,6 +9,7 @@ import com.qst.crop.exception.LoginException;
 import com.qst.crop.model.LoginVO;
 import com.qst.crop.security.JwtUtil;
 import com.qst.crop.security.SecurityUtil;
+import com.qst.crop.service.NotificationService;
 import com.qst.crop.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Override
     public LoginVO login(String userName, String password, String role) {
@@ -102,6 +106,24 @@ public class UserServiceImpl implements UserService {
 
         int result = userMapper.insert(user);
         // 专家信息在审批通过后创建
+        // 需要审批的角色注册后，通知所有管理员有新的注册审批待处理
+        if ("pending".equals(user.getStatus())) {
+            String roleText;
+            switch (user.getRole() == null ? "" : user.getRole().toLowerCase()) {
+                case "bank": roleText = "银行"; break;
+                case "expert": roleText = "专家"; break;
+                case "admin": roleText = "管理员"; break;
+                default: roleText = user.getRole();
+            }
+            String name = user.getRealName() != null && !user.getRealName().isEmpty()
+                    ? user.getRealName() : user.getUserName();
+            String content = String.format("用户「%s」申请注册%s账号，正在等待审批。", name, roleText);
+            try {
+                notificationService.sendToRole("admin", "注册审批待处理", content, "register_approval", null);
+            } catch (Exception e) {
+                log.warn("注册审批通知发送失败: {}", e.getMessage());
+            }
+        }
         return true;
     }
 

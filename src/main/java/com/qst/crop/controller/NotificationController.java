@@ -55,4 +55,16 @@ public class NotificationController {
             return Result.error(404, "消息不存在");
         }
     }
+
+    /**
+     * 标记当前用户的全部通知为已读（点击铃铛即消除红点）
+     */
+    @PutMapping("/read-all")
+    public Result<Map<String, Object>> markAllAsRead(Authentication auth) {
+        String userName = auth.getName();
+        int updated = notificationService.markAllAsRead(userName);
+        Map<String, Object> data = new HashMap<>();
+        data.put("updated", updated);
+        return Result.success("已全部标记为已读", data);
+    }
 }
