@@ -28,7 +28,6 @@ const loading = ref(false)
 const submitting = ref(false)
 const showMatchDialog = ref(false)
 const matchLoading = ref(false)
-const inviting = ref(false)
 
 // 申请表单
 const form = ref({
@@ -41,16 +40,15 @@ const form = ref({
 
 // 联合贷款人控制
 const needPartner = ref(false)
-const selectedMatchPartner = ref(null)
+// 联合贷款人最多 2 人；每个槽位：{ name, phone, invitation, matchInfo }
+const MAX_PARTNERS = 2
+const partners = ref([])
+// 当前正在发送邀请的槽位下标（用于按钮 loading）
+const invitingIndex = ref(null)
 
-// 联合贷款人信息（手动或智能匹配填充）
-const partnerForm = ref({
-  name: '',
-  phone: ''
-})
-
-// 已发送邀请的状态
-const partnerInvitation = ref(null)
+function emptyPartnerSlot() {
+  return { name: '', phone: '', invitation: null, matchInfo: null }
+}
 
 const crops = ['小麦', '玉米', '水稻', '大豆', '棉花', '蔬菜', '果树', '其他']
 
@@ -60,7 +58,8 @@ function saveDraft() {
     const draft = {
       form: { ...form.value },
       needPartner: needPartner.value,
-      partnerForm: { ...partnerForm.value },
+      // 只持久化姓名/电话，邀请状态挂载后从后端重新对账，避免草稿中的状态过期
+      partners: partners.value.map(p => ({ name: p.name, phone: p.phone })),
       selectedProductId: selectedProduct.value?.id || null
     }
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
@@ -85,9 +84,12 @@ function restoreDraft() {
       form.value.fileInfo = draft.form.fileInfo || ''
     }
     needPartner.value = draft.needPartner || false
-    if (draft.partnerForm) {
-      partnerForm.value.name = draft.partnerForm.name || ''
-      partnerForm.value.phone = draft.partnerForm.phone || ''
+    if (Array.isArray(draft.partners)) {
+      partners.value = draft.partners
+        .slice(0, MAX_PARTNERS)
+        .map(p => ({ name: p.name || '', phone: p.phone || '', invitation: null, matchInfo: null }))
+    } else {
+      partners.value = draft.needPartner ? [emptyPartnerSlot()] : []
     }
     if (draft.selectedProductId) {
       const pid = draft.selectedProductId
@@ -115,7 +117,7 @@ function autoSaveDraft() {
   draftTimer = setTimeout(saveDraft, 500)
 }
 
-watch(() => ({ ...form.value, needPartner: needPartner.value, ...partnerForm.value }), autoSaveDraft, { deep: true })
+watch(() => ({ ...form.value, needPartner: needPartner.value, partners: partners.value }), autoSaveDraft, { deep: true })
 window.addEventListener('beforeunload', saveDraft)
 
 // ------------------ 数据加载 ------------------
@@ -155,12 +157,26 @@ function handleSelectProduct(product) {
 function handleNeedPartnerChange(val) {
   if (!val) {
     needPartner.value = false
-    partnerForm.value = { name: '', phone: '' }
-    selectedMatchPartner.value = null
-    partnerInvitation.value = null
+    partners.value = []
   } else {
     needPartner.value = true
+    if (partners.value.length === 0) {
+      partners.value = [emptyPartnerSlot()]
+    }
   }
+}
+
+function addPartnerSlot() {
+  if (partners.value.length >= MAX_PARTNERS) return
+  partners.value.push(emptyPartnerSlot())
+}
+
+function removePartnerSlot(index) {
+  partners.value.splice(index, 1)
+}
+
+function clearPartnerSlot(index) {
+  partners.value[index] = emptyPartnerSlot()
 }
 
 // ------------------ 智能匹配 ------------------
@@ -183,15 +199,34 @@ async function openMatchDialog() {
   }
 }
 
-// 从匹配列表中选择联合贷款人
+// 从匹配列表中选择联合贷款人：填入第一个空槽位；无空槽位且未满则自动新增一个
 function selectMatchPartner(partner) {
-  partnerForm.value = {
-    name: partner.realName || partner.userName || '',
-    phone: partner.phone || ''
+  const phone = partner.phone || ''
+  // 同手机号去重：已存在于任意槽位则拒绝
+  const dup = partners.value.some(p => p.phone && phone && p.phone === phone)
+  if (dup) {
+    ElMessage.warning('该联合贷款人已在槽位中，请勿重复添加')
+    return
   }
-  selectedMatchPartner.value = partner
+  // 优先填第一个"空的"槽位（姓名/电话均未填写），避免覆盖已填写的槽位
+  let idx = partners.value.findIndex(p => !p.name && !p.phone)
+  if (idx === -1) {
+    // 没有空槽位：未满则自动新增第 2 个槽位
+    if (partners.value.length >= MAX_PARTNERS) {
+      ElMessage.warning('联合贷款人槽位已满（最多 2 人），请先清除某个槽位')
+      return
+    }
+    partners.value.push(emptyPartnerSlot())
+    idx = partners.value.length - 1
+  }
+  partners.value[idx] = {
+    name: partner.realName || partner.userName || '',
+    phone,
+    invitation: null,
+    matchInfo: partner
+  }
   showMatchDialog.value = false
-  ElMessage.success('已选择 ' + partnerForm.value.name + ' 作为联合贷款人')
+  ElMessage.success('已选择 ' + partners.value[idx].name + ' 作为联合贷款人')
 }
 
 // 匹配度等级
@@ -202,91 +237,105 @@ function getMatchLevel(score) {
 }
 
 // ------------------ 发送邀请 ------------------
-async function sendPartnerInvite() {
-  if (!partnerForm.value.name || !partnerForm.value.phone) {
+async function sendPartnerInvite(index) {
+  const slot = partners.value[index]
+  if (!slot) return
+  if (!slot.name || !slot.phone) {
     ElMessage.warning('请先选择或填写联合贷款人信息')
     return
   }
+  // 同一手机号不能在多个槽位重复邀请
+  const dupPhone = partners.value.some((p, i) => i !== index && p.phone && p.phone === slot.phone)
+  if (dupPhone) {
+    ElMessage.warning('该手机号已在其他联合贷款人槽位使用')
+    return
+  }
 
-  inviting.value = true
+  invitingIndex.value = index
   try {
     const description = '希望与您联合申请' + form.value.cropItem + '种植贷款，金额' + form.value.amount + '元'
     const res = await sendPartnerInvitationAPI({
-      inviteeName: partnerForm.value.name,
-      inviteePhone: partnerForm.value.phone,
+      inviteeName: slot.name,
+      inviteePhone: slot.phone,
       projectDescription: description
     })
     if (res.code === 200) {
       ElMessage.success('邀请已发送，等待对方确认')
       await loadSentInvitations()
-      // 查找刚发送的邀请（在我发送的列表中对方姓名在 applicantRealName 字段）
-      const newInv = sentInvitations.value.find(
-        inv => inv.applicantRealName === partnerForm.value.name && inv.status === 0
-      )
-      if (newInv) {
-        partnerInvitation.value = newInv
-      } else if (res.data) {
-        // 直接用返回结果
-        partnerInvitation.value = { status: 0, applicantRealName: partnerForm.value.name }
-      }
+      reconcileSlotInvitation(index)
     }
   } catch {
   } finally {
-    inviting.value = false
+    invitingIndex.value = null
   }
 }
 
-// 根据当前联合贷款人信息，从已发送列表中恢复/刷新邀请状态
-function reconcilePartnerInvitation() {
-  if (!partnerForm.value.phone && !partnerForm.value.name) {
+// 根据某槽位的联合贷款人信息，从已发送列表中恢复/刷新邀请状态
+function reconcileSlotInvitation(index) {
+  const slot = partners.value[index]
+  if (!slot) return
+  if (!slot.phone && !slot.name) {
+    slot.invitation = null
     return
   }
-  // 优先按电话匹配（唯一），其次按姓名；后端已发送列表把被邀请人信息放在 applicant* 字段
+  // 后端"我发送的"列表把被邀请人信息放在 applicant* 字段
   const found = sentInvitations.value.find(inv => {
     const phone = inv.applicantPhone || inv.inviteePhone
     const name = inv.applicantRealName || inv.inviteeRealName
-    if (partnerForm.value.phone && phone === partnerForm.value.phone) return true
-    if (partnerForm.value.name && name === partnerForm.value.name) return true
+    if (slot.phone && phone === slot.phone) return true
+    if (slot.name && name === slot.name) return true
     return false
   })
-  partnerInvitation.value = found || null
+  slot.invitation = found || null
+}
+
+function reconcileAllInvitations() {
+  partners.value.forEach((_, i) => reconcileSlotInvitation(i))
 }
 
 // 查询联合贷款人邀请的最新状态
-async function refreshPartnerStatus() {
+async function refreshPartnerStatus(index) {
   await loadSentInvitations()
-  reconcilePartnerInvitation()
+  if (index == null) {
+    reconcileAllInvitations()
+  } else {
+    reconcileSlotInvitation(index)
+  }
 }
 
-// 已同意的联合贷款人
-const agreedPartner = computed(() => {
-  if (!partnerInvitation.value) return null
-  return partnerInvitation.value.status === 1 ? partnerInvitation.value : null
-})
+// 已同意的联合贷款人（用于提交申请）
+const agreedPartners = computed(() =>
+  partners.value.filter(p => p.invitation && p.invitation.status === 1)
+)
+// 是否存在待确认 / 已拒绝 / 已填写未发送邀请的槽位（影响是否可提交）
+const hasPendingSlot = computed(() => partners.value.some(p => p.invitation && p.invitation.status === 0))
+const hasRejectedSlot = computed(() => partners.value.some(p => p.invitation && p.invitation.status === 2))
+const hasUninvitedFilledSlot = computed(() => partners.value.some(p => (p.name || p.phone) && !p.invitation))
 
-// 邀请状态文本
-const invitationStatusText = computed(() => {
-  if (!partnerInvitation.value) return ''
+// 邀请状态文本/类型（按槽位）
+function slotInvitationStatusText(slot) {
+  if (!slot || !slot.invitation) return ''
   const map = { 0: '等待对方确认', 1: '对方已同意', 2: '对方已拒绝' }
-  return map[partnerInvitation.value.status] || ''
-})
-
-const invitationStatusType = computed(() => {
-  if (!partnerInvitation.value) return 'info'
+  return map[slot.invitation.status] || ''
+}
+function slotInvitationStatusType(slot) {
+  if (!slot || !slot.invitation) return 'info'
   const map = { 0: 'warning', 1: 'success', 2: 'danger' }
-  return map[partnerInvitation.value.status] || 'info'
-})
+  return map[slot.invitation.status] || 'info'
+}
 
 // ------------------ 提交申请 ------------------
 const canSubmit = computed(() => {
   if (!form.value.productId || !form.value.amount || !form.value.repaymentPeriod || !form.value.cropItem) {
     return false
   }
-  // 如果有联合贷款人，必须有已同意的
-  if (needPartner.value) {
-    return agreedPartner.value !== null
+  if (!needPartner.value) {
+    // 没有联合贷款人，可以直接提交
+    return true
   }
-  // 没有联合贷款人，可以直接提交
+  // 需要联合贷款人：至少 1 位已同意，且其余槽位不得有待确认/已拒绝/未发送邀请的情况
+  if (agreedPartners.value.length < 1) return false
+  if (hasPendingSlot.value || hasRejectedSlot.value || hasUninvitedFilledSlot.value) return false
   return true
 })
 
@@ -295,13 +344,17 @@ const submitHint = computed(() => {
   if (!form.value.amount) return '请填写融资金额'
   if (!form.value.repaymentPeriod) return '请选择还款期限'
   if (!form.value.cropItem) return '请填写融资农作物'
-  if (needPartner.value && !agreedPartner.value) {
-    if (!partnerForm.value.name) return '请通过智能匹配选择或手动填写联合贷款人'
-    if (!partnerInvitation.value) return '请发送邀请给联合贷款人'
-    if (partnerInvitation.value.status === 2) return '对方已拒绝邀请，请选择其他联合贷款人'
-    if (partnerInvitation.value.status === 0) return '等待对方同意邀请'
-    return ''
+  if (!needPartner.value) return ''
+  if (hasUninvitedFilledSlot.value) return '有联合贷款人信息未发送邀请，请补发或清除'
+  if (agreedPartners.value.length < 1) {
+    if (!partners.value.some(p => p.name || p.phone)) return '请通过智能匹配选择或手动填写联合贷款人'
+    if (!partners.value.some(p => p.invitation)) return '请为联合贷款人发送邀请'
+    if (hasPendingSlot.value) return '等待联合贷款人同意邀请'
+    if (hasRejectedSlot.value) return '联合贷款人已拒绝邀请，请重新选择'
+    return '请等待联合贷款人同意'
   }
+  if (hasPendingSlot.value) return '有联合贷款人邀请待确认，可等待同意或移除该槽位'
+  if (hasRejectedSlot.value) return '有联合贷款人已拒绝邀请，请移除或重新选择'
   return ''
 })
 
@@ -353,17 +406,18 @@ async function handleSubmit() {
 
   submitting.value = true
   try {
+    // 已同意的联合贷款人按顺序填入 combination1 / combination2（至多 2 位）
+    const agreed = agreedPartners.value
     const data = {
       productId: form.value.productId,
       money: Number(form.value.amount),
       repayment: Number(form.value.repaymentPeriod),
       cropItem: form.value.cropItem,
       fileInfo: form.value.fileInfo,
-      // 联合贷款人信息（有则传递，无则留空）
-      combinationName1: agreedPartner.value?.applicantRealName || '',
-      combinationPhone1: agreedPartner.value?.applicantPhone || '',
-      combinationName2: '',
-      combinationPhone2: ''
+      combinationName1: agreed[0]?.invitation?.applicantRealName || agreed[0]?.name || '',
+      combinationPhone1: agreed[0]?.invitation?.applicantPhone || agreed[0]?.phone || '',
+      combinationName2: agreed[1]?.invitation?.applicantRealName || agreed[1]?.name || '',
+      combinationPhone2: agreed[1]?.invitation?.applicantPhone || agreed[1]?.phone || ''
     }
 
     const res = await applyFinanceAPI(data)
@@ -380,21 +434,12 @@ async function handleSubmit() {
       }
       selectedProduct.value = null
       needPartner.value = false
-      partnerForm.value = { name: '', phone: '' }
-      selectedMatchPartner.value = null
-      partnerInvitation.value = null
+      partners.value = []
     }
   } catch {
   } finally {
     submitting.value = false
   }
-}
-
-// 移除联合贷款人
-function clearPartner() {
-  partnerForm.value = { name: '', phone: '' }
-  selectedMatchPartner.value = null
-  partnerInvitation.value = null
 }
 
 // 放弃保存（清空草稿和表单）
@@ -414,17 +459,15 @@ function handleDiscardDraft() {
     }
     selectedProduct.value = null
     needPartner.value = false
-    partnerForm.value = { name: '', phone: '' }
-    selectedMatchPartner.value = null
-    partnerInvitation.value = null
+    partners.value = []
     ElMessage.success('已放弃草稿')
   }).catch(() => {})
 }
 
-// 刷新邀请状态（轮询）
+// 刷新邀请状态（轮询）：只要有待确认的邀请就刷新全部槽位
 function startPolling() {
   const timer = setInterval(() => {
-    if (needPartner.value && partnerInvitation.value && partnerInvitation.value.status === 0) {
+    if (needPartner.value && hasPendingSlot.value) {
       refreshPartnerStatus()
     }
   }, 5000)
@@ -436,8 +479,8 @@ onMounted(async () => {
   loadProducts()
   restoreDraft()
   await loadSentInvitations()
-  // 用已发送列表回填邀请状态，避免刷新/重登后"发送邀请"按钮重复出现
-  reconcilePartnerInvitation()
+  // 用已发送列表回填各槽位邀请状态，避免刷新/重登后"发送邀请"按钮重复出现
+  reconcileAllInvitations()
   pollTimer = startPolling()
 })
 
@@ -453,7 +496,7 @@ function formatRate(rate) {
     <div class="page-head">
       <div>
         <h2 class="page-title">融资申请</h2>
-        <p class="page-sub">选择银行产品，填写申请信息，可选联合贷款人</p>
+        <p class="page-sub">选择银行产品，填写申请信息，可选联合贷款人（最多 2 人）</p>
       </div>
       <el-button size="small" @click="handleDiscardDraft">放弃保存</el-button>
     </div>
@@ -554,7 +597,7 @@ function formatRate(rate) {
                   v-model="needPartner"
                   @change="handleNeedPartnerChange"
                 />
-                <span class="toggle-label">需要联合贷款人</span>
+                <span class="toggle-label">需要联合贷款人（最多 2 人）</span>
               </div>
 
               <template v-if="needPartner">
@@ -572,23 +615,39 @@ function formatRate(rate) {
                   <span v-if="!form.amount || !form.cropItem" class="match-hint-text">
                     请先填写融资金额和农作物
                   </span>
+                  <span class="match-hint-text partner-count">
+                    已同意 {{ agreedPartners.length }} / {{ partners.length }} 个槽位
+                  </span>
                 </div>
 
-                <!-- 联合贷款人信息 -->
-                <div class="partner-form-area">
+                <!-- 联合贷款人槽位列表 -->
+                <div v-for="(slot, index) in partners" :key="index" class="partner-form-area">
+                  <div class="partner-slot-head">
+                    <span class="partner-slot-title">联合贷款人 {{ index + 1 }}</span>
+                    <el-button
+                      v-if="partners.length > 1"
+                      text
+                      type="danger"
+                      size="small"
+                      @click="removePartnerSlot(index)"
+                    >
+                      移除
+                    </el-button>
+                  </div>
+
                   <div class="partner-fields">
                     <el-input
-                      v-model="partnerForm.name"
+                      v-model="slot.name"
                       placeholder="联合贷款人姓名"
-                      :disabled="!!partnerInvitation"
+                      :disabled="!!slot.invitation"
                       style="width: 200px"
                     >
                       <template #prepend>姓名</template>
                     </el-input>
                     <el-input
-                      v-model="partnerForm.phone"
+                      v-model="slot.phone"
                       placeholder="联合贷款人电话"
-                      :disabled="!!partnerInvitation"
+                      :disabled="!!slot.invitation"
                       style="width: 220px"
                     >
                       <template #prepend>电话</template>
@@ -596,22 +655,22 @@ function formatRate(rate) {
 
                     <div class="partner-actions">
                       <!-- 未发送邀请 -->
-                      <template v-if="!partnerInvitation">
+                      <template v-if="!slot.invitation">
                         <el-button
-                          v-if="partnerForm.name && partnerForm.phone"
+                          v-if="slot.name && slot.phone"
                           type="primary"
                           size="small"
-                          :loading="inviting"
-                          @click="sendPartnerInvite"
+                          :loading="invitingIndex === index"
+                          @click="sendPartnerInvite(index)"
                         >
                           发送邀请
                         </el-button>
                         <el-button
-                          v-if="partnerForm.name || partnerForm.phone"
+                          v-if="slot.name || slot.phone"
                           text
                           type="danger"
                           size="small"
-                          @click="clearPartner"
+                          @click="clearPartnerSlot(index)"
                         >
                           清除
                         </el-button>
@@ -619,24 +678,24 @@ function formatRate(rate) {
 
                       <!-- 已发送邀请，显示状态 -->
                       <template v-else>
-                        <el-tag :type="invitationStatusType" size="default">
-                          {{ invitationStatusText }}
+                        <el-tag :type="slotInvitationStatusType(slot)" size="default">
+                          {{ slotInvitationStatusText(slot) }}
                         </el-tag>
                         <el-button
-                          v-if="partnerInvitation.status === 2"
+                          v-if="slot.invitation.status === 2"
                           text
                           type="primary"
                           size="small"
-                          @click="clearPartner"
+                          @click="clearPartnerSlot(index)"
                         >
                           重新选择
                         </el-button>
                         <el-button
-                          v-if="partnerInvitation.status === 2 || partnerInvitation.status === 1"
+                          v-if="slot.invitation.status === 2 || slot.invitation.status === 1"
                           text
                           type="primary"
                           size="small"
-                          @click="refreshPartnerStatus"
+                          @click="refreshPartnerStatus(index)"
                         >
                           刷新状态
                         </el-button>
@@ -645,12 +704,20 @@ function formatRate(rate) {
                   </div>
 
                   <!-- 已选择的匹配伙伴信息 -->
-                  <div v-if="selectedMatchPartner" class="selected-match-info">
+                  <div v-if="slot.matchInfo" class="selected-match-info">
                     <el-icon><InfoFilled /></el-icon>
-                    <span>信用分：{{ selectedMatchPartner.credit || '-' }}</span>
-                    <span>农作物：{{ selectedMatchPartner.cropItem || '-' }}</span>
-                    <span>地址：{{ selectedMatchPartner.address || '-' }}</span>
+                    <span>信用分：{{ slot.matchInfo.credit || '-' }}</span>
+                    <span>农作物：{{ slot.matchInfo.cropItem || '-' }}</span>
+                    <span>地址：{{ slot.matchInfo.address || '-' }}</span>
                   </div>
+                </div>
+
+                <!-- 添加联合贷款人 -->
+                <div v-if="partners.length < MAX_PARTNERS" class="add-partner-action">
+                  <el-button plain @click="addPartnerSlot">
+                    <el-icon><Plus /></el-icon>
+                    添加联合贷款人（还可添加 {{ MAX_PARTNERS - partners.length }} 位）
+                  </el-button>
                 </div>
               </template>
 
@@ -686,7 +753,7 @@ function formatRate(rate) {
     <el-dialog v-model="showMatchDialog" title="智能匹配推荐" width="700px">
       <div class="match-hint">
         <el-icon><InfoFilled /></el-icon>
-        系统根据信用分、融资金额和农作物为您推荐匹配度较高的联合贷款人，点击"选择"自动填写信息
+        系统根据信用分、融资金额和农作物为您推荐匹配度较高的联合贷款人，点击"选择"自动填写到第一个可用槽位
       </div>
       <el-table :data="matchedPartners" v-loading="matchLoading" stripe max-height="450">
         <el-table-column prop="realName" label="姓名" width="90" />
@@ -839,6 +906,7 @@ function formatRate(rate) {
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 
 .match-hint-text {
@@ -846,11 +914,29 @@ function formatRate(rate) {
   color: var(--text-muted);
 }
 
+.partner-count {
+  margin-left: auto;
+}
+
 .partner-form-area {
   padding: 12px;
   background: white;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
+  margin-bottom: 12px;
+}
+
+.partner-slot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.partner-slot-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--green-deep);
 }
 
 .partner-fields {
@@ -876,6 +962,11 @@ function formatRate(rate) {
   border-radius: var(--radius-sm);
   font-size: 12px;
   color: var(--blue-dark);
+}
+
+.add-partner-action {
+  display: flex;
+  justify-content: center;
 }
 
 .no-partner-hint {

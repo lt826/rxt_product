@@ -18,7 +18,7 @@ async function loadApplications() {
       applications.value = (res.data || []).map(f => ({
         id: f.financeId, applicant: f.ownName || f.realName, realName: f.realName,
         amount: f.money ? `¥${f.money}` : '-', phone: f.phone,
-        status: f.status, statusLabel: {0:'待审批',1:'已驳回',2:'已通过'}[f.status] || '待审批',
+        status: f.status, statusLabel: {0:'待审批',1:'已通过',2:'已驳回'}[f.status] || '待审批',
         date: f.createTime?.substring(0,10) || '-', remark: f.remark || ''
       }))
     }
@@ -29,13 +29,14 @@ onMounted(loadApplications)
 
 async function handleAction(id, newStatus) {
   currentId.value = id
-  action.value = newStatus === 2 ? '审核通过' : '驳回'
+  action.value = newStatus === 1 ? '审核通过' : '驳回'
   remark.value = ''
   dialogVisible.value = true
 }
 
 async function confirmAction() {
-  const status = action.value === '审核通过' ? 2 : 1
+  // 与后端自洽：1=已通过，2=已驳回
+  const status = action.value === '审核通过' ? 1 : 2
   try {
     const res = await updateFinanceStatusAPI(currentId.value, status, remark.value)
     if (res.code === 200) {
@@ -58,14 +59,14 @@ async function confirmAction() {
       <el-table-column prop="date" label="申请日期" width="110" />
       <el-table-column label="状态" width="100">
         <template #default="{row}">
-          <el-tag :type="{0:'warning',1:'danger',2:'success'}[row.status] || 'info'">{{ row.statusLabel }}</el-tag>
+          <el-tag :type="{0:'warning',1:'success',2:'danger'}[row.status] || 'info'">{{ row.statusLabel }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="操作" width="180">
         <template #default="{row}">
           <template v-if="row.status === 0">
-            <el-button size="small" type="success" @click="handleAction(row.id, 2)">通过</el-button>
-            <el-button size="small" type="danger" @click="handleAction(row.id, 1)">驳回</el-button>
+            <el-button size="small" type="success" @click="handleAction(row.id, 1)">通过</el-button>
+            <el-button size="small" type="danger" @click="handleAction(row.id, 2)">驳回</el-button>
           </template>
           <span v-else style="color:#999;font-size:13px">已处理</span>
         </template>

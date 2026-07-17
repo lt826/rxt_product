@@ -7,8 +7,9 @@ import { ElMessage } from 'element-plus'
 const records = ref([])
 const loading = ref(false)
 
-const statusMap = { 0: '审核中', 1: '已驳回', 2: '已通过' }
-const statusTypeMap = { 0: 'warning', 1: 'danger', 2: 'success' }
+// 与后端 updateFinanceStatus 自洽：0 审核中 / 1 已通过 / 2 已驳回
+const statusMap = { 0: '审核中', 1: '已通过', 2: '已驳回' }
+const statusTypeMap = { 0: 'warning', 1: 'success', 2: 'danger' }
 
 // 拼接联合贷款人（姓名 + 电话），最多 2 人
 function formatPartners(f) {

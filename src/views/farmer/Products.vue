@@ -7,6 +7,7 @@ import { useUserStore } from '../../stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Delete, Search } from '@element-plus/icons-vue'
 import { parseCategory, cleanContent } from '../../utils/goods'
+import { ensureFarmerContactReady } from '../../utils/farmerContact'
 import ProductCard from '../../components/ProductCard.vue'
 
 const router = useRouter()
@@ -161,7 +162,13 @@ function useImageUrl() {
   }
 }
 
-function openPublishDialog() {
+async function openPublishDialog() {
+  // 发布商品前校验：农户必须已填写手机号和地址
+  const ok = await ensureFarmerContactReady({
+    userName: userStore.userInfo?.userName,
+    router
+  })
+  if (!ok) return
   editingId.value = null
   form.value = { title: '', price: null, content: '', type: '', address: '', picture: '' }
   imageFile.value = null

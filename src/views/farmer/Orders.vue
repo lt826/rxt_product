@@ -1,8 +1,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getSoldOrdersAPI, shipOrderAPI } from '../../api/order'
 import { listAddressAPI } from '../../api/address'
+import { useUserStore } from '../../stores/user'
+import { ensureFarmerContactReady } from '../../utils/farmerContact'
+
+const router = useRouter()
+const userStore = useUserStore()
 
 const orders = ref([])
 const loading = ref(false)
@@ -47,7 +53,13 @@ function pickAddress(id) {
   shipForm.value.shipAddress = addr.addressDetail || ''
 }
 
-function openShip(o) {
+async function openShip(o) {
+  // 发货前校验：农户必须已填写手机号和地址
+  const ok = await ensureFarmerContactReady({
+    userName: userStore.userInfo?.userName,
+    router
+  })
+  if (!ok) return
   // 优先沿用订单已有物流信息，否则自动带入默认发货地址
   const base = defaultAddr.value
   shipForm.value = {
