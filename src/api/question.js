@@ -33,4 +33,14 @@ export function getQuestionDetailAPI(id) {
   return request({ url: `/api/v1/question/${id}`, method: 'get' })
 }
 
+// 获取某个问题的全部对话消息（农户与专家持续聊天）
+export function getQuestionMessagesAPI(id) {
+  return request({ url: `/api/v1/question/${id}/messages`, method: 'get' })
+}
+
+// 在某个问题下追加一条对话消息（农户追问 / 专家回复）
+export function replyQuestionAPI(id, content) {
+  return request({ url: `/api/v1/question/${id}/messages`, method: 'post', data: { content } })
+}
+
 

@@ -2,8 +2,9 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
-import { getFarmersAPI } from '../../api/user'
+import { getFarmersAPI, getUserInfoAPI } from '../../api/user'
 import { getConversationAPI, sendMessageAPI } from '../../api/message'
+import { followAPI, unfollowAPI, checkFollowAPI } from '../../api/follow'
 import { useUserStore } from '../../stores/user'
 import { useMessageStore } from '../../stores/message'
 import { parseGoodsCard, goodsPreviewText } from '../../utils/goodsMessage'
@@ -28,6 +29,13 @@ const newMessage = ref('')
 const messagesContainer = ref(null)
 let refreshTimer = null
 let chatTimer = null
+
+// 农户资料弹窗（点头像打开；不含电话/地址；可关注/取消关注）
+const profileVisible = ref(false)
+const profileUser = ref(null)
+const profileLoading = ref(false)
+const following = ref(false)
+const followLoading = ref(false)
 
 // 会话映射：userName -> 会话信息（含未读数/预览）
 const convMap = computed(() => {
@@ -135,6 +143,47 @@ function closeChat() {
   newMessage.value = ''
 }
 
+// 打开农户资料弹窗：拉取完整资料 + 查询是否已关注
+async function openProfile() {
+  if (!chatFarmer.value) return
+  profileVisible.value = true
+  profileLoading.value = true
+  following.value = false
+  try {
+    const [infoRes, checkRes] = await Promise.all([
+      getUserInfoAPI(chatFarmer.value.userName),
+      checkFollowAPI(chatFarmer.value.userName).catch(() => null)
+    ])
+    if (infoRes && infoRes.code === 200 && infoRes.data) profileUser.value = infoRes.data
+    if (checkRes && checkRes.code === 200) following.value = !!checkRes.data.following
+  } catch { /* ignore */ } finally { profileLoading.value = false }
+}
+
+// 关注 / 取消关注
+async function toggleFollow() {
+  if (!profileUser.value) return
+  const uname = profileUser.value.userName
+  followLoading.value = true
+  try {
+    if (following.value) {
+      await unfollowAPI(uname)
+      following.value = false
+      ElMessage.success('已取消关注')
+    } else {
+      const res = await followAPI(uname)
+      following.value = true
+      ElMessage.success(res && res.data && res.data.newFollow === false ? '已关注' : '关注成功')
+    }
+  } catch { ElMessage.error('操作失败') } finally { followLoading.value = false }
+}
+
+function creditType(c) {
+  const n = Number(c)
+  if (n >= 80) return 'success'
+  if (n >= 60) return 'warning'
+  return 'danger'
+}
+
 // 解析消息为商品卡片（农户发来的商品可在卡片上一键加入购物车）
 function goodsCardOf(msg) { return parseGoodsCard(msg && msg.content) }
 
@@ -216,7 +265,18 @@ onUnmounted(() => {
       </div>
     </el-card>
 
-    <el-dialog v-model="chatVisible" :title="'与 ' + (chatFarmer?.realName || chatFarmer?.nickName || chatFarmer?.userName || '').toString()" width="600px" @close="closeChat">
+    <el-dialog v-model="chatVisible" width="600px" @close="closeChat">
+      <template #header>
+        <div class="chat-header" @click="openProfile" title="点击查看农户资料">
+          <el-avatar :size="40" :src="chatFarmer?.avatar" class="chat-header-avatar">
+            <span class="chat-header-emoji">👨‍🌾</span>
+          </el-avatar>
+          <div class="chat-header-text">
+            <div class="chat-header-name">{{ chatFarmer?.realName || chatFarmer?.nickName || chatFarmer?.userName || '' }}</div>
+            <div class="chat-header-tip">点击头像查看资料 · 关注后可收到ta的新商品通知</div>
+          </div>
+        </div>
+      </template>
       <div class="chat-messages" ref="messagesContainer">
         <div v-if="chatMessages.length === 0" style="text-align:center;padding:40px 0;color:var(--text-muted)">
           暂无消息，开始对话吧！
@@ -233,6 +293,35 @@ onUnmounted(() => {
           <el-button size="small" @click="chatVisible = false">关闭</el-button>
           <el-button size="small" type="primary" @click="sendMessage">发送</el-button>
         </div>
+      </div>
+    </el-dialog>
+
+    <!-- 农户资料弹窗（不显示电话/地址） -->
+    <el-dialog v-model="profileVisible" title="农户资料" width="420px" append-to-body>
+      <div v-loading="profileLoading" class="profile-box">
+        <div class="profile-top">
+          <el-avatar :size="64" :src="profileUser?.avatar" class="profile-avatar">
+            <span class="chat-header-emoji">👨‍🌾</span>
+          </el-avatar>
+          <div class="profile-name">{{ profileUser?.realName || profileUser?.nickName || profileUser?.userName || '-' }}</div>
+          <el-tag size="small" type="success" effect="plain">农户</el-tag>
+        </div>
+        <el-descriptions :column="1" border size="small" class="profile-desc">
+          <el-descriptions-item label="昵称">{{ profileUser?.nickName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="用户名">{{ profileUser?.userName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="信誉分">
+            <el-tag :type="creditType(profileUser?.credit)" size="small" effect="light">{{ profileUser?.credit ?? 0 }}</el-tag>
+          </el-descriptions-item>
+        </el-descriptions>
+        <div class="profile-notice">为保护农户隐私，电话与地址不对外展示，可在聊天中沟通。</div>
+        <el-button
+          :type="following ? 'default' : 'primary'"
+          :loading="followLoading"
+          class="profile-follow-btn"
+          @click="toggleFollow"
+        >
+          {{ following ? '已关注 · 取消关注' : '+ 关注' }}
+        </el-button>
       </div>
     </el-dialog>
   </div>
@@ -275,4 +364,23 @@ onUnmounted(() => {
 .message-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 .chat-input-area { margin-top: 12px; }
 .chat-input-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+/* 聊天头部可点头像 */
+.chat-header { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.chat-header-avatar { flex-shrink: 0; background: linear-gradient(135deg, var(--green), var(--green-light)); }
+.chat-header-emoji { font-size: 22px; }
+.chat-header-text { min-width: 0; }
+.chat-header-name { font-size: 16px; font-weight: 700; color: var(--text); }
+.chat-header-tip { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.chat-header:hover .chat-header-name { color: var(--green); }
+
+/* 农户资料弹窗 */
+.profile-box { padding: 4px 0; }
+.profile-top { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 16px; }
+.profile-avatar { background: linear-gradient(135deg, var(--green), var(--green-light)); }
+.profile-name { font-size: 18px; font-weight: 700; color: var(--text); }
+.profile-desc { margin-bottom: 12px; }
+.profile-notice { font-size: 12px; color: var(--text-muted); background: var(--bg); padding: 8px 12px; border-radius: 6px; margin-bottom: 16px; line-height: 1.6; }
+.profile-follow-btn { width: 100%; }
+:deep(.profile-desc .el-descriptions__label) { width: 90px; min-width: 90px; }
 </style>

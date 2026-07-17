@@ -5,7 +5,7 @@ import { useUserStore } from '../stores/user'
 import { useMessageStore } from '../stores/message'
 import { ElMessageBox } from 'element-plus'
 import { Bell, ArrowDown } from '@element-plus/icons-vue'
-import { getUnreadNotificationCountAPI, getMyNotificationsAPI, markNotificationReadAPI } from '../api/notification'
+import { getUnreadNotificationCountAPI, getMyNotificationsAPI, markNotificationReadAPI, markAllNotificationsReadAPI } from '../api/notification'
 
 const route = useRoute()
 const router = useRouter()
@@ -188,6 +188,19 @@ async function loadNotifList() {
   } catch { /* ignore */ }
 }
 
+// 点击铃铛打开通知面板时：加载列表 + 一次性把全部未读标记为已读，红点立即消除
+async function openNotifPanel() {
+  await loadNotifList()
+  if (unreadCount.value > 0) {
+    try {
+      await markAllNotificationsReadAPI()
+      unreadCount.value = 0
+      // 面板内单条状态同步为已读（用于样式）
+      notifList.value.forEach(n => { n.isRead = 1 })
+    } catch { /* ignore */ }
+  }
+}
+
 async function readNotif(n) {
   if (n.isRead === 1) return
   try {
@@ -272,7 +285,7 @@ onUnmounted(() => {
       </div>
 
       <div class="header-right">
-        <el-popover placement="bottom-end" :width="360" trigger="click" @show="loadNotifList">
+        <el-popover placement="bottom-end" :width="360" trigger="click" @show="openNotifPanel">
           <template #reference>
             <el-badge :value="unreadCount" :hidden="unreadCount === 0" :max="99" class="notif-badge">
               <el-icon class="notif-bell"><Bell /></el-icon>

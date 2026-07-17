@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 import { getUserInfoAPI } from '../../api/user'
+import { getFansCountAPI } from '../../api/follow'
 import { ArrowLeft } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -14,6 +15,8 @@ const isFarmer = computed(() => role.value === 'farmer')
 const loading = ref(false)
 // 完整资料（含 realName / phone / address / avatar / credit 等），登录返回的 LoginVO 不含这些字段，需单独拉取
 const profile = ref({})
+// 农户粉丝数
+const fansCount = ref(0)
 
 const nickName = computed(() => profile.value.nickName || userStore.nickName || userStore.userInfo?.userName || '用户')
 const initial = computed(() => (nickName.value || 'U')[0].toUpperCase())
@@ -49,6 +52,13 @@ async function loadProfile() {
     const res = await getUserInfoAPI(userName)
     if (res && res.code === 200 && res.data) {
       profile.value = res.data
+    }
+    // 农户额外拉取粉丝数
+    if (isFarmer.value) {
+      try {
+        const f = await getFansCountAPI(userName)
+        if (f && f.code === 200) fansCount.value = f.data.count || 0
+      } catch { /* ignore */ }
     }
   } catch (e) { /* 拦截器已提示 */ }
   finally { loading.value = false }
@@ -106,6 +116,10 @@ function def(v) { return (v === null || v === undefined || v === '') ? '-' : v }
           <span class="credit-label">信誉分</span>
           <el-tag :type="creditType" size="large" effect="dark" round>{{ credit }}</el-tag>
         </div>
+        <div v-if="isFarmer" class="welcome-credit">
+          <span class="credit-label">粉丝</span>
+          <el-tag type="primary" size="large" effect="dark" round>{{ fansCount }}</el-tag>
+        </div>
       </div>
     </el-card>
 
@@ -125,6 +139,9 @@ function def(v) { return (v === null || v === undefined || v === '') ? '-' : v }
         </el-descriptions-item>
         <el-descriptions-item v-if="isFarmer" label="信誉分">
           <el-tag :type="creditType" effect="light">{{ credit }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item v-if="isFarmer" label="粉丝数">
+          <el-tag type="primary" effect="light">{{ fansCount }}</el-tag>
         </el-descriptions-item>
       </el-descriptions>
       <div style="margin-top:16px">

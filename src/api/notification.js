@@ -14,3 +14,8 @@ export function getUnreadNotificationCountAPI() {
 export function markNotificationReadAPI(id) {
   return request({ url: `/api/v1/notifications/${id}/read`, method: 'put' })
 }
+
+// 标记当前用户全部通知为已读（点击铃铛即消除红点）
+export function markAllNotificationsReadAPI() {
+  return request({ url: '/api/v1/notifications/read-all', method: 'put' })
+}

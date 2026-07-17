@@ -1,8 +1,12 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { askQuestionAPI, getMyQuestionsAPI } from '../../api/question'
+import { askQuestionAPI, getMyQuestionsAPI, getQuestionMessagesAPI, replyQuestionAPI } from '../../api/question'
 import { listExperts } from '../../api/expert'
+import { useUserStore } from '../../stores/user'
+
+const userStore = useUserStore()
+const currentUserName = ref(userStore.userInfo?.userName || '')
 
 const questions = ref([])
 const experts = ref([])
@@ -10,6 +14,14 @@ const loading = ref(false)
 const submitting = ref(false)
 
 const form = ref({ expertName: '', title: '', question: '', plantName: '' })
+
+// 聊天弹窗
+const chatVisible = ref(false)
+const chatQuestion = ref(null)
+const chatMessages = ref([])
+const newReply = ref('')
+const messagesContainer = ref(null)
+let pollTimer = null
 
 async function loadExperts() {
   try {
@@ -25,7 +37,8 @@ async function loadQuestions() {
     if (res.code === 200) {
       questions.value = (res.data || []).map(q => ({
         id: q.id, title: q.title, question: q.question, answer: q.answer,
-        expert: q.expertName || '待分配', expertRealName: '', date: '-', status: q.status
+        expert: q.expertName || '待分配', expertRealName: '', date: '-', status: q.status,
+        plantName: q.plantName
       }))
       if (experts.value.length) {
         const expertMap = Object.fromEntries(experts.value.map(e => [e.userName, e.realName]))
@@ -52,7 +65,57 @@ async function handleSubmit() {
   } catch { /* handled in interceptor */ } finally { submitting.value = false }
 }
 
-onMounted(async () => { await loadExperts(); await loadQuestions() })
+// 打开与某问题的持续聊天
+async function openChat(q) {
+  chatQuestion.value = q
+  chatVisible.value = true
+  newReply.value = ''
+  await loadChatMessages()
+}
+
+async function loadChatMessages() {
+  if (!chatQuestion.value) return
+  try {
+    const res = await getQuestionMessagesAPI(chatQuestion.value.id)
+    if (res.code === 200) {
+      chatMessages.value = res.data || []
+      await nextTick()
+      scrollToBottom()
+    }
+  } catch { /* ignore */ }
+}
+
+async function sendReply() {
+  if (!newReply.value.trim() || !chatQuestion.value) return
+  try {
+    const res = await replyQuestionAPI(chatQuestion.value.id, newReply.value.trim())
+    if (res.code === 200) {
+      newReply.value = ''
+      await loadChatMessages()
+    }
+  } catch { ElMessage.error('发送失败') }
+}
+
+function formatTime(timeStr) { return timeStr ? String(timeStr).replace('T', ' ').substring(11, 16) : '' }
+function formatDate(timeStr) { return timeStr ? String(timeStr).replace('T', ' ').substring(0, 16) : '' }
+function scrollToBottom() { if (messagesContainer.value) messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight }
+
+// 聊天打开时轮询刷新（接收专家回复）
+function startPolling() {
+  stopPolling()
+  pollTimer = setInterval(async () => {
+    if (chatVisible.value) await loadChatMessages()
+  }, 10000)
+}
+function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null } }
+
+function onChatClosed() { stopPolling() }
+
+onMounted(async () => {
+  await loadExperts()
+  await loadQuestions()
+})
+onUnmounted(stopPolling)
 </script>
 
 <template>
@@ -60,7 +123,7 @@ onMounted(async () => { await loadExperts(); await loadQuestions() })
     <div class="page-head">
       <div>
         <h2 class="page-title">专家问答</h2>
-        <p class="page-sub">向农业专家提问，获取专业指导</p>
+        <p class="page-sub">向农业专家提问，可在聊天框中持续交流</p>
       </div>
     </div>
 
@@ -99,14 +162,54 @@ onMounted(async () => { await loadExperts(); await loadQuestions() })
           <el-button text size="small" @click="loadQuestions">刷新</el-button>
         </div>
       </template>
-      <div v-for="q in questions" :key="q.id" class="qa-item">
-        <div class="qa-question">{{ q.title }}</div>
-        <div class="qa-meta">提问给：{{ q.expertRealName || q.expert }}</div>
-        <div class="qa-answer" v-if="q.answer">答：{{ q.answer }}</div>
-        <el-tag v-else size="small" type="info">待回复</el-tag>
+      <div v-for="q in questions" :key="q.id" class="qa-item" @click="openChat(q)">
+        <div class="qa-item-main">
+          <div class="qa-question">{{ q.title }}</div>
+          <div class="qa-meta">提问给：{{ q.expertRealName || q.expert }}<span v-if="q.plantName"> · {{ q.plantName }}</span></div>
+          <div class="qa-preview">{{ q.question }}</div>
+        </div>
+        <div class="qa-item-side">
+          <el-tag v-if="q.status === 1" size="small" type="success">已回复</el-tag>
+          <el-tag v-else size="small" type="warning">待回复</el-tag>
+          <el-button size="small" type="primary" plain>查看 / 回复</el-button>
+        </div>
       </div>
       <el-empty v-if="!loading && questions.length === 0" description="暂无提问记录" />
     </el-card>
+
+    <!-- 持续聊天弹窗 -->
+    <el-dialog
+      v-model="chatVisible"
+      :title="chatQuestion ? ('与专家 ' + (chatQuestion.expertRealName || chatQuestion.expert) + ' 的对话') : ''"
+      width="600px"
+      destroy-on-close
+      @open="startPolling"
+      @close="onChatClosed"
+    >
+      <div v-if="chatQuestion" class="chat-topic">主题：{{ chatQuestion.title }}</div>
+      <div class="chat-messages" ref="messagesContainer">
+        <div v-if="chatMessages.length === 0" style="text-align:center;padding:40px 0;color:var(--text-muted)">
+          暂无消息
+        </div>
+        <div
+          v-for="msg in chatMessages"
+          :key="msg.id || msg.createTime"
+          class="message-row"
+          :class="msg.sender === currentUserName ? 'sent' : 'received'"
+        >
+          <div class="message-sender">{{ msg.senderRole === 'expert' ? '专家' : '我' }}</div>
+          <div class="message-bubble">{{ msg.content }}</div>
+          <div class="message-time">{{ formatTime(msg.createTime) }}</div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <el-input v-model="newReply" type="textarea" :rows="3" placeholder="输入追问内容，Ctrl+Enter 发送..." @keydown.enter.ctrl="sendReply" />
+        <div class="chat-input-actions">
+          <el-button size="small" @click="chatVisible = false">关闭</el-button>
+          <el-button size="small" type="primary" @click="sendReply">发送</el-button>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -118,9 +221,29 @@ onMounted(async () => { await loadExperts(); await loadQuestions() })
 .ask-card { border-radius: var(--radius-md); }
 .submit-btn { width: 100%; border-radius: var(--radius-sm); }
 .card-header-row { display: flex; justify-content: space-between; align-items: center; }
-.qa-item { padding: 16px 0; border-bottom: 1px solid var(--border); }
-.qa-item:last-child { border: none; }
-.qa-question { font-weight: 500; color: var(--text); margin-bottom: 6px; }
-.qa-answer { color: var(--green); font-size: 14px; margin-bottom: 6px; font-weight: 500; }
-.qa-meta { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+.qa-item {
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px; border-bottom: 1px solid var(--border);
+  cursor: pointer; border-radius: var(--radius-sm); transition: background 0.2s;
+}
+.qa-item:last-child { border-bottom: none; }
+.qa-item:hover { background: var(--green-mist); }
+.qa-item-main { flex: 1; min-width: 0; }
+.qa-question { font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.qa-meta { color: var(--text-muted); font-size: 13px; margin-bottom: 4px; }
+.qa-preview { color: var(--text-secondary); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qa-item-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+
+.chat-topic { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.chat-messages { max-height: 400px; overflow-y: auto; padding: 12px 0; }
+.message-row { display: flex; flex-direction: column; margin-bottom: 12px; }
+.message-row.sent { align-items: flex-end; }
+.message-row.received { align-items: flex-start; }
+.message-sender { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+.message-bubble { max-width: 70%; padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.5; word-break: break-word; }
+.message-row.sent .message-bubble { background: var(--green); color: #fff; }
+.message-row.received .message-bubble { background: var(--bg); color: var(--text); }
+.message-time { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.chat-input-area { margin-top: 12px; }
+.chat-input-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 </style>
