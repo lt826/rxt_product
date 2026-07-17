@@ -86,7 +86,12 @@ onMounted(async () => {
             <el-checkbox :model-value="true" disabled />
           </div>
           <div class="item-thumb">
-            <span>{{ ['🥔','🍑','🍌','🥬','🍄','🌽','🍎','🍇'][item.id % 8] }}</span>
+            <img
+              v-if="item.picture && /^https?:\/\//i.test(item.picture)"
+              :src="item.picture"
+              :alt="item.title"
+            />
+            <span v-else>{{ ['🥔','🍑','🍌','🥬','🍄','🌽','🍎','🍇'][(item.id % 8)] }}</span>
           </div>
           <div class="item-info">
             <h4 class="item-name">{{ item.title || item.name || '商品' }}</h4>
@@ -205,6 +210,12 @@ onMounted(async () => {
   justify-content: center;
   font-size: 36px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+.item-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .item-info { flex: 1; min-width: 0; }
 .item-name {

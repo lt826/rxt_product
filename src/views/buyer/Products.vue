@@ -2,12 +2,25 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { ShoppingCart, Search } from '@element-plus/icons-vue'
 import { getGoodsListAPI } from '../../api/goods'
+import ProductCard from '../../components/ProductCard.vue'
 
 const router = useRouter()
 const loading = ref(false)
 const keyword = ref('')
 const list = ref([])
+
+// 购物车数量（localStorage），用于右上角徽标
+const cartCount = ref(0)
+function syncCartCount() {
+  try {
+    cartCount.value = JSON.parse(localStorage.getItem('rxt_cart') || '[]')
+      .reduce((s, c) => s + (Number(c.quantity) || 0), 0)
+  } catch {
+    cartCount.value = 0
+  }
+}
 
 async function loadList() {
   loading.value = true
@@ -28,211 +41,202 @@ async function loadList() {
 }
 
 function addToCart(item) {
+  const id = item.goodsId ?? item.id
   const cart = JSON.parse(localStorage.getItem('rxt_cart') || '[]')
-  const existingIndex = cart.findIndex(c => c.id === item.goodsId)
-  if (existingIndex >= 0) {
-    cart[existingIndex].quantity += 1
+  const existing = cart.find(c => c.id === id)
+  if (existing) {
+    existing.quantity += 1
   } else {
     cart.push({
-      id: item.goodsId,
+      id,
       title: item.title,
       price: parseFloat(item.price) || 0,
       quantity: 1,
       seller: item.ownName,
-      address: item.address
+      address: item.address,
+      picture: item.picture || ''
     })
   }
   localStorage.setItem('rxt_cart', JSON.stringify(cart))
+  syncCartCount()
   ElMessage.success('已加入购物车：' + item.title)
+}
+
+function viewDetail(item) {
+  const id = item.goodsId ?? item.id
+  router.push('/buyer/goods/' + id)
 }
 
 function goToCart() {
   router.push('/buyer/cart')
 }
 
-onMounted(() => { loadList() })
-
-function handleImageError(event) {
-  event.target.style.display = 'none'
-  if (event.target.nextElementSibling) {
-    event.target.nextElementSibling.style.display = 'flex'
-  }
+// 去求购大厅
+function goToDemand() {
+  router.push('/buyer/demand')
 }
+
+onMounted(() => { syncCartCount(); loadList() })
 </script>
 
 <template>
-  <div class="products-page">
-    <div class="page-head">
-      <div>
-        <h2 class="page-title">商品大厅</h2>
-        <p class="page-sub">浏览优质农产品，一键加入购物车</p>
+  <div class="hall">
+    <!-- 大厅头部：分类切换 + 购物车 -->
+    <div class="hall-bar">
+      <div class="hall-tabs">
+        <button class="hall-tab active">商品货源</button>
+        <button class="hall-tab" @click="goToDemand">求购需求</button>
       </div>
-      <div class="head-actions">
-        <el-input
-          v-model="keyword"
-          placeholder="搜索商品名称..."
-          clearable
-          class="search-input"
-          @keyup.enter="loadList"
-          @clear="loadList"
-        >
-          <template #append>
-            <el-button @click="loadList"><el-icon><Search /></el-icon></el-button>
-          </template>
-        </el-input>
-        <el-button type="primary" @click="goToCart" class="cart-btn">
-          <el-icon><ShoppingCart /></el-icon>
-          购物车
-        </el-button>
-      </div>
+      <el-button type="primary" class="hall-cart" @click="goToCart">
+        <el-icon><ShoppingCart /></el-icon>
+        <span>购物车</span>
+        <span v-if="cartCount > 0" class="hall-cart-badge">{{ cartCount }}</span>
+      </el-button>
     </div>
 
-    <div v-loading="loading" class="goods-grid">
-      <div v-for="item in list" :key="item.goodsId" class="goods-card">
-        <div class="goods-img" @click="router.push('/buyer/goods/' + item.goodsId)" style="cursor:pointer">
-          <img
-            v-if="item.picture && item.picture.startsWith('http')"
-            :src="item.picture"
-            :alt="item.title"
-            @error="handleImageError"
-          />
-          <span v-else>📦</span>
-        </div>
-        <div class="goods-info">
-          <div class="goods-title">{{ item.title }}</div>
-          <div class="goods-price-row">
-            <span class="price">¥{{ item.price }}</span>
-            <span class="goods-seller">{{ item.ownName }}</span>
-          </div>
-          <div class="goods-tags">
-            <el-tag v-if="item.type" size="small" type="success" effect="plain">{{ item.type }}</el-tag>
-            <el-tag v-if="item.address" size="small" type="info" effect="plain">{{ item.address }}</el-tag>
-          </div>
-          <el-button type="primary" size="small" class="add-cart-btn" @click="addToCart(item)">
-            <el-icon><Plus /></el-icon> 加入购物车
-          </el-button>
-        </div>
-      </div>
+    <!-- 搜索栏 -->
+    <div class="hall-search">
+      <el-icon class="hall-search-icon"><Search /></el-icon>
+      <input
+        v-model="keyword"
+        class="hall-search-input"
+        placeholder="输入关键词搜索：苹果、土豆、原产地直供…"
+        @keyup.enter="loadList"
+      />
+      <el-button type="primary" class="hall-search-btn" @click="loadList">搜索</el-button>
     </div>
-    <el-empty v-if="!list.length && !loading" description="暂无农户供应商品" />
+
+    <!-- 商品网格 -->
+    <div v-loading="loading" class="hall-grid">
+      <ProductCard
+        v-for="item in list"
+        :key="item.goodsId"
+        :item="item"
+        @view="viewDetail"
+        @add-cart="addToCart"
+      />
+    </div>
+    <el-empty v-if="!list.length && !loading" description="暂无农户供应商品">
+      <el-button @click="loadList">刷新</el-button>
+    </el-empty>
   </div>
 </template>
 
 <style scoped>
-.products-page {
-  max-width: 1200px;
+.hall {
+  max-width: 1280px;
+  margin: 0 auto;
 }
-.page-head {
+
+/* ===== 顶栏：切换 + 购物车 ===== */
+.hall-bar {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
+  gap: 16px;
+  margin-bottom: 18px;
   flex-wrap: wrap;
-  gap: 16px;
 }
-.page-title {
-  font-size: 24px;
-  font-weight: 800;
-  color: var(--green-deep);
-  margin: 0 0 4px;
-}
-.page-sub {
-  font-size: 14px;
-  color: var(--text-muted);
-  margin: 0;
-}
-.head-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.search-input {
-  width: 300px;
-}
-.cart-btn {
-  height: 40px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Grid */
-.goods-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
-}
-@media (max-width: 1200px) { .goods-grid { grid-template-columns: repeat(4, 1fr); } }
-@media (max-width: 900px) { .goods-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 600px) { .goods-grid { grid-template-columns: repeat(2, 1fr); } }
-
-.goods-card {
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  overflow: hidden;
-  transition: all 0.25s;
-}
-.goods-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-.goods-img {
-  width: 100%;
-  height: 180px;
-  background: var(--bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 48px;
-  overflow: hidden;
-}
-.goods-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.goods-img span { display: none; }
-
-.goods-info {
-  padding: 14px;
-}
-.goods-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text);
-  margin-bottom: 8px;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.goods-price-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.price {
-  color: var(--amber);
-  font-size: 18px;
-  font-weight: 700;
-}
-.goods-seller {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-.goods-tags {
-  display: flex;
+.hall-tabs {
+  display: inline-flex;
   gap: 4px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 5px;
 }
-.add-cart-btn {
-  width: 100%;
+.hall-tab {
+  position: relative;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.hall-tab:hover {
+  color: var(--green);
+}
+.hall-tab.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--green), var(--green-mid));
+  box-shadow: 0 2px 8px rgba(27, 67, 50, 0.18);
+}
+.hall-cart {
+  position: relative;
+  height: 42px;
+  padding: 0 22px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+}
+.hall-cart-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--price);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
+/* ===== 搜索栏 ===== */
+.hall-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 6px 6px 6px 44px;
+  margin-bottom: 22px;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.hall-search:focus-within {
+  border-color: var(--green-light);
+  box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.15);
+}
+.hall-search-icon {
+  position: absolute;
+  left: 16px;
+  font-size: 18px;
+  color: var(--text-muted);
+}
+.hall-search-input {
+  flex: 1;
+  height: 40px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text);
+}
+.hall-search-input::placeholder {
+  color: var(--text-muted);
+}
+.hall-search-btn {
+  height: 40px;
+  padding: 0 26px;
   border-radius: var(--radius-sm);
   font-weight: 600;
 }
+
+/* ===== 网格 ===== */
+.hall-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  min-height: 120px;
+}
+@media (max-width: 1100px) { .hall-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 820px)  { .hall-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px)  { .hall-grid { grid-template-columns: 1fr; } }
 </style>

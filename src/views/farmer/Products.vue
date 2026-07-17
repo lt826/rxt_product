@@ -1,11 +1,16 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { getGoodsListAPI, getMyGoodsAPI, publishGoodsAPI, deleteGoodsAPI } from '../../api/goods'
+import { useRouter, useRoute } from 'vue-router'
+import { getGoodsListAPI, getMyGoodsAPI, publishGoodsAPI, updateGoodsAPI, deleteGoodsAPI } from '../../api/goods'
 import { uploadImageAPI } from '../../api/upload'
 import { useUserStore } from '../../stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Delete, Search } from '@element-plus/icons-vue'
+import { parseCategory, cleanContent } from '../../utils/goods'
+import ProductCard from '../../components/ProductCard.vue'
 
+const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const products = ref([])
@@ -13,6 +18,8 @@ const loading = ref(false)
 const dialogVisible = ref(false)
 const submitting = ref(false)
 const uploadingImage = ref(false)
+// 正在编辑的商品 id；为 null 表示「新建发布」
+const editingId = ref(null)
 
 const form = ref({
   title: '', price: null, content: '', type: '', address: '', picture: ''
@@ -24,6 +31,7 @@ const imageUrlInput = ref('')
 
 // 数据源切换 & 筛选条件
 const mode = ref('all')
+const keyword = ref('')
 const priceMin = ref(null)
 const priceMax = ref(null)
 const sellerName = ref('')
@@ -33,6 +41,15 @@ const isMine = (item) => !!(item.seller && item.seller === userStore.userInfo?.u
 
 const filteredProducts = computed(() => {
   let arr = products.value.slice()
+  const kw = keyword.value.trim().toLowerCase()
+  if (kw) {
+    arr = arr.filter(p =>
+      String(p.title || '').toLowerCase().includes(kw) ||
+      String(p.content || '').toLowerCase().includes(kw) ||
+      String(p.seller || '').toLowerCase().includes(kw) ||
+      String(p.address || '').toLowerCase().includes(kw)
+    )
+  }
   const s = sellerName.value.trim()
   if (s) arr = arr.filter(p => p.seller && String(p.seller).includes(s))
   if (priceMin.value != null && priceMin.value !== '') {
@@ -49,7 +66,16 @@ const filteredProducts = computed(() => {
   return arr
 })
 
-onMounted(async () => { await loadProducts() })
+onMounted(async () => {
+  await loadProducts()
+  // 从商品详情「编辑商品」跳来时，自动打开编辑弹窗
+  const editId = route.query.edit
+  if (editId) {
+    const target = products.value.find(p => String(p.id) === String(editId))
+    if (target) openEditDialog(target)
+    router.replace({ path: '/farmer/products' })
+  }
+})
 
 async function loadProducts() {
   loading.value = true
@@ -59,7 +85,7 @@ async function loadProducts() {
       : await getGoodsListAPI({ type: '1' })
     if (res.code === 200) {
       products.value = (res.data || []).map(g => ({
-        id: g.goodsId, title: g.title, price: g.price, content: g.content,
+        id: g.goodsId, goodsId: g.goodsId, title: g.title, price: g.price, content: g.content,
         seller: g.ownName, type: g.type, address: g.address,
         picture: g.picture, createTime: g.createTime
       }))
@@ -77,10 +103,15 @@ function onModeChange() {
 }
 
 function resetFilters() {
+  keyword.value = ''
   priceMin.value = null
   priceMax.value = null
   sellerName.value = ''
   sortOrder.value = ''
+}
+
+function viewDetail(item) {
+  router.push('/farmer/goods/' + item.id)
 }
 
 async function handleImageChange(file) {
@@ -131,11 +162,29 @@ function useImageUrl() {
 }
 
 function openPublishDialog() {
-  dialogVisible.value = true
+  editingId.value = null
   form.value = { title: '', price: null, content: '', type: '', address: '', picture: '' }
   imageFile.value = null
   imagePreview.value = ''
   imageUrlInput.value = ''
+  dialogVisible.value = true
+}
+
+// 编辑已发布商品：把保存时注入的【商品类型：xx】前缀拆回 type 与 content
+function openEditDialog(item) {
+  editingId.value = item.id
+  form.value = {
+    title: item.title || '',
+    price: item.price != null ? Number(item.price) : null,
+    content: cleanContent(item.content),
+    type: parseCategory(item.content),
+    address: item.address || '',
+    picture: item.picture || ''
+  }
+  imageFile.value = null
+  imagePreview.value = (item.picture && /^https?:\/\//i.test(item.picture)) ? item.picture : ''
+  imageUrlInput.value = ''
+  dialogVisible.value = true
 }
 
 async function submitPublish() {
@@ -149,20 +198,24 @@ async function submitPublish() {
   try {
     if (uploadingImage.value) return ElMessage.warning('图片正在上传，请稍候')
     const contentWithCategory = '【商品类型：' + form.value.type.trim() + '】\n' + form.value.content.trim()
-    const res = await publishGoodsAPI({
+    const payload = {
       title: form.value.title.trim(), price: parseFloat(form.value.price),
       content: contentWithCategory, type: '1', address: form.value.address.trim(),
       picture: form.value.picture || ''
-    })
+    }
+    const res = editingId.value
+      ? await updateGoodsAPI(editingId.value, payload)
+      : await publishGoodsAPI(payload)
     if (res.code === 200) {
-      ElMessage.success('商品发布成功！')
+      ElMessage.success(editingId.value ? '商品更新成功！' : '商品发布成功！')
       dialogVisible.value = false
+      editingId.value = null
       await loadProducts()
     } else {
-      ElMessage.error(res.message || '发布失败')
+      ElMessage.error(res.message || '操作失败')
     }
   } catch {
-    ElMessage.error('发布失败，请重试')
+    ElMessage.error(editingId.value ? '更新失败，请重试' : '发布失败，请重试')
   } finally {
     submitting.value = false
   }
@@ -187,38 +240,40 @@ async function deleteProduct(item) {
     loading.value = false
   }
 }
-
-function viewDetail(item) {
-  ElMessage.info('查看详情：' + item.title)
-}
 </script>
 
 <template>
-  <div class="products-page">
-    <div class="page-head">
-      <div>
-        <h2 class="page-title">商品货源</h2>
-        <p class="page-sub">管理你的商品，发布新的农产品</p>
+  <div class="hall">
+    <!-- 大厅头部：货源切换 + 发布 -->
+    <div class="hall-bar">
+      <div class="hall-tabs">
+        <button class="hall-tab" :class="{ active: mode === 'all' }" @click="mode = 'all'; onModeChange()">全部货源</button>
+        <button class="hall-tab" :class="{ active: mode === 'mine' }" @click="mode = 'mine'; onModeChange()">我的发布</button>
       </div>
-      <el-button type="primary" @click="openPublishDialog" class="publish-btn">
-        <el-icon><Plus /></el-icon> 发布商品
+      <el-button type="primary" class="hall-publish" @click="openPublishDialog">
+        <el-icon><Plus /></el-icon>
+        <span>免费发布商品</span>
       </el-button>
     </div>
 
-    <!-- 切换 + 筛选 -->
-    <div class="filter-bar">
-      <el-radio-group v-model="mode" @change="onModeChange">
-        <el-radio-button value="all">全部货源</el-radio-button>
-        <el-radio-button value="mine">我的发布</el-radio-button>
-      </el-radio-group>
-      <div class="filter-controls">
-        <span class="filter-label">价格</span>
+    <!-- 搜索 + 筛选 -->
+    <div class="hall-toolbar">
+      <div class="hall-search">
+        <el-icon class="hall-search-icon"><Search /></el-icon>
+        <input
+          v-model="keyword"
+          class="hall-search-input"
+          placeholder="搜索商品名称、产地、农户…"
+        />
+      </div>
+      <div class="hall-filters">
+        <span class="f-label">价格</span>
         <el-input-number v-model="priceMin" :min="0" :precision="2" placeholder="最低"
           controls-position="right" class="price-input" />
-        <span class="filter-sep">-</span>
+        <span class="f-sep">—</span>
         <el-input-number v-model="priceMax" :min="0" :precision="2" placeholder="最高"
           controls-position="right" class="price-input" />
-        <span class="filter-label">农户</span>
+        <span class="f-label">农户</span>
         <el-input v-model="sellerName" placeholder="农户名" clearable class="seller-input"
           :disabled="mode === 'mine'" />
         <el-select v-model="sortOrder" placeholder="默认排序" clearable class="sort-select">
@@ -229,40 +284,29 @@ function viewDetail(item) {
       </div>
     </div>
 
-    <div v-loading="loading">
-      <div class="goods-grid">
-        <div v-for="item in filteredProducts" :key="item.id" class="goods-card">
-          <div class="goods-img">
-            <img v-if="item.picture && item.picture.startsWith('http')" :src="item.picture" :alt="item.title" @error="item.picture = ''" />
-            <span v-else>📦</span>
-          </div>
-          <div class="goods-info">
-            <div class="goods-title">{{ item.title }}</div>
-            <div class="goods-price-row">
-              <span class="price">¥{{ item.price }}</span>
-              <span class="goods-seller">{{ item.seller }}</span>
-            </div>
-            <div class="goods-tags">
-              <el-tag v-if="item.type" size="small" type="success" effect="plain">{{ item.type }}</el-tag>
-              <el-tag v-if="item.address" size="small" type="info" effect="plain">{{ item.address }}</el-tag>
-            </div>
-            <div class="goods-actions">
-              <el-button size="small" type="primary" plain @click="viewDetail(item)">查看</el-button>
-              <el-button v-if="mode === 'mine' || isMine(item)" size="small" type="danger" plain @click="deleteProduct(item)">删除</el-button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <el-empty v-if="!loading && products.length === 0" description="暂无商品数据，点击上方按钮发布你的第一个商品">
-        <el-button type="primary" @click="openPublishDialog">立即发布</el-button>
-      </el-empty>
-      <el-empty v-else-if="!loading && filteredProducts.length === 0" description="没有符合条件的商品">
-        <el-button @click="resetFilters">清空筛选条件</el-button>
-      </el-empty>
+    <!-- 商品网格 -->
+    <div v-loading="loading" class="hall-grid">
+      <ProductCard
+        v-for="item in filteredProducts"
+        :key="item.id"
+        :item="item"
+        :show-cart="false"
+        manage-mode
+        :can-manage="mode === 'mine' || isMine(item)"
+        @view="viewDetail"
+        @edit="openEditDialog"
+        @delete="deleteProduct"
+      />
     </div>
+    <el-empty v-if="!loading && products.length === 0" description="暂无商品数据，点击上方按钮发布你的第一个商品">
+      <el-button type="primary" @click="openPublishDialog">立即发布</el-button>
+    </el-empty>
+    <el-empty v-else-if="!loading && filteredProducts.length === 0" description="没有符合条件的商品">
+      <el-button @click="resetFilters">清空筛选条件</el-button>
+    </el-empty>
 
-    <!-- Publish dialog -->
-    <el-dialog v-model="dialogVisible" title="发布农产品" width="550px" destroy-on-close>
+    <!-- 发布弹窗 -->
+    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑商品' : '发布农产品'" width="550px" destroy-on-close>
       <el-form :model="form" label-width="95px">
         <el-form-item label="商品名称" required>
           <el-input v-model="form.title" placeholder="如：有机红富士苹果" maxlength="50" show-word-limit />
@@ -310,127 +354,128 @@ function viewDetail(item) {
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting || uploadingImage" @click="submitPublish">确认发布</el-button>
+        <el-button type="primary" :loading="submitting || uploadingImage" @click="submitPublish">{{ editingId ? '保存修改' : '确认发布' }}</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <style scoped>
-.products-page { max-width: 1200px; margin: 0 auto; }
+.hall { max-width: 1280px; margin: 0 auto; }
 
-.page-head {
+/* ===== 顶栏 ===== */
+.hall-bar {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
   gap: 16px;
-}
-.page-title { font-size: 24px; font-weight: 800; color: var(--green-deep); margin: 0 0 4px; }
-.page-sub { font-size: 14px; color: var(--text-muted); margin: 0; }
-.publish-btn {
-  height: 40px;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* 筛选栏 */
-.filter-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  margin-bottom: 18px;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 20px;
-  padding: 14px 18px;
+}
+.hall-tabs {
+  display: inline-flex;
+  gap: 4px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  padding: 5px;
 }
-.filter-controls {
+.hall-tab {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 20px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.hall-tab:hover { color: var(--green); }
+.hall-tab.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--green), var(--green-mid));
+  box-shadow: 0 2px 8px rgba(27, 67, 50, 0.18);
+}
+.hall-publish {
+  height: 42px;
+  padding: 0 22px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+}
+
+/* ===== 工具栏：搜索 + 筛选 ===== */
+.hall-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.hall-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 220px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 12px 0 38px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.hall-search:focus-within {
+  border-color: var(--green-light);
+  box-shadow: 0 0 0 3px rgba(82, 183, 136, 0.15);
+}
+.hall-search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 17px;
+  color: var(--text-muted);
+}
+.hall-search-input {
+  flex: 1;
+  height: 38px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text);
+}
+.hall-search-input::placeholder { color: var(--text-muted); }
+
+.hall-filters {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
-.filter-label { font-size: 13px; color: var(--text-muted); }
-.filter-sep { color: var(--text-muted); }
-.price-input { width: 110px; }
-.seller-input { width: 150px; }
-.sort-select { width: 130px; }
+.f-label { font-size: 13px; color: var(--text-muted); }
+.f-sep { color: var(--text-muted); }
+.price-input { width: 104px; }
+.seller-input { width: 130px; }
+.sort-select { width: 124px; }
 
-.goods-grid {
+/* ===== 网格 ===== */
+.hall-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  min-height: 120px;
 }
-@media (max-width: 900px) { .goods-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .goods-grid { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .hall-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 820px)  { .hall-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px)  { .hall-grid { grid-template-columns: 1fr; } }
 
-.goods-card {
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  overflow: hidden;
-  transition: all 0.25s;
-}
-.goods-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-.goods-img {
-  width: 100%;
-  height: 180px;
-  background: var(--bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 48px;
-  overflow: hidden;
-}
-.goods-img img { width: 100%; height: 100%; object-fit: cover; }
-.goods-img span { display: none; }
-
-.goods-info { padding: 14px; }
-.goods-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text);
-  margin-bottom: 8px;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.goods-price-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.price {
-  display: inline-flex;
-  align-items: center;
-  background: linear-gradient(135deg, #ff4d4f, #ff7a45);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 700;
-  padding: 3px 10px;
-  border-radius: 6px;
-  line-height: 1.4;
-  letter-spacing: 0.02em;
-  box-shadow: 0 1px 3px rgba(255, 77, 79, 0.25);
-}
-.goods-seller { font-size: 12px; color: var(--text-muted); }
-.goods-tags { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
-.goods-actions { display: flex; gap: 8px; }
-.goods-actions .el-button { flex: 1; }
-
-/* Image upload */
+/* ===== 图片上传（发布弹窗） ===== */
 .image-upload-container { width: 100%; }
 .image-uploader { width: 100%; }
 .upload-trigger {
@@ -460,11 +505,7 @@ function viewDetail(item) {
   background: var(--bg);
 }
 .image-preview img { width: 100%; height: 100%; object-fit: contain; }
-.image-preview-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-}
+.image-preview-actions { position: absolute; top: 8px; right: 8px; }
 .url-input-section { margin-top: 16px; }
 .url-divider {
   text-align: center;
