@@ -71,7 +71,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         purchase.setOwnName(buyerName);
         purchase.setPurchaseType(1); // 1=买到的
         purchase.setTotalPrice(dto.getTotalPrice());
-        purchase.setPurchaseStatus(2); // 2=待发货（本流程无付款环节）
+        purchase.setPurchaseStatus(1); // 1=待付款（接入支付宝，支付确认后转待发货）
         purchase.setAddress(addr.getAddressDetail());
         purchase.setConsignee(addr.getConsignee());
         purchase.setConsigneePhone(addr.getPhone());
@@ -80,8 +80,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         purchaseMapper.insert(purchase);
         Integer purchaseId = purchase.getPurchaseId();
 
-        // 明细 + 卖家侧订单 + 通知卖家
-        Set<String> notifiedSellers = new HashSet<>();
+        // 明细 + 卖家侧订单（下单进入待付款，支付确认后再通知卖家发货）
         for (CreateOrderDTO.OrderItem item : dto.getItems()) {
             Goods goods = goodsMapper.selectById(item.getGoodsId());
             String sellerName = goods != null ? goods.getOwnName() : null;
@@ -100,29 +99,64 @@ public class PurchaseServiceImpl implements PurchaseService {
             sell.setPurchaseType(2); // 2=卖出的
             sell.setUninPrice(item.getUninPrice());
             sell.setSumPrice(detail.getSumPrice());
-            sell.setPurchaseStatus(2); // 待发货
+            sell.setPurchaseStatus(1); // 待付款（支付确认后在 markPaid 中转待发货）
             sell.setGoodsId(item.getGoodsId());
             sell.setAddress(""); // 发货地址在发货时填写，先置空以满足非空约束
             sell.setCreateTime(now);
             sell.setUpdateTime(now);
             sellPurchaseMapper.insert(sell);
 
-            // 给每个卖家发一条购买通知（去重）
-            if (sellerName != null && !sellerName.equals(buyerName) && notifiedSellers.add(sellerName)) {
-                String content = "买家 " + buyerName + " 购买了您的商品"
-                        + (goods != null ? "《" + goods.getTitle() + "》" : "")
-                        + "，请及时发货";
-                notificationService.send(sellerName, "您有新的订单", content, "order", purchaseId);
-            }
+            // 下单后进入待付款，暂不通知卖家发货；支付确认后在 markPaid 中通知
         }
-        // 通知买家下单/付款成功（本系统下单即进入待发货，无独立支付环节）
+        // 通知买家订单已创建，请完成支付
         try {
-            notificationService.send(buyerName, "付款成功",
-                    "您的订单 #" + purchaseId + " 已成功提交，合计 ¥"
+            notificationService.send(buyerName, "订单已创建",
+                    "您的订单 #" + purchaseId + " 已提交，合计 ¥"
                             + (dto.getTotalPrice() != null ? dto.getTotalPrice() : BigDecimal.ZERO)
-                            + "，等待卖家发货。", "order", purchaseId);
+                            + "，请尽快完成支付。", "order", purchaseId);
         } catch (Exception ignore) { }
         return purchaseId;
+    }
+
+    @Override
+    @Transactional
+    public boolean markPaid(Integer purchaseId, String buyerName) {
+        Purchase p = purchaseMapper.selectById(purchaseId);
+        if (p == null || !buyerName.equals(p.getOwnName())) {
+            return false;
+        }
+        // 幂等：仅待付款(1)才结算并通知；已是待发货(2)等直接返回成功
+        if (p.getPurchaseStatus() != null && p.getPurchaseStatus() != 1) {
+            return true;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        p.setPurchaseStatus(2); // 待发货
+        p.setUpdateTime(now);
+        purchaseMapper.updateById(p);
+
+        // 同步卖家侧订单状态，并通知各卖家发货（去重）
+        List<SellPurchase> sells = sellPurchaseMapper.selectList(
+                new QueryWrapper<SellPurchase>().eq("purchase_id", purchaseId));
+        Set<String> notifiedSellers = new HashSet<>();
+        for (SellPurchase sp : sells) {
+            sp.setPurchaseStatus(2); // 待发货
+            sp.setUpdateTime(now);
+            sellPurchaseMapper.updateById(sp);
+            if (sp.getOwnName() != null && !sp.getOwnName().equals(buyerName)
+                    && notifiedSellers.add(sp.getOwnName())) {
+                notificationService.send(sp.getOwnName(), "您有新的订单",
+                        "买家 " + buyerName + " 已完成支付（订单 #" + purchaseId + "），请及时发货",
+                        "order", purchaseId);
+            }
+        }
+        // 通知买家付款成功
+        try {
+            notificationService.send(buyerName, "付款成功",
+                    "您的订单 #" + purchaseId + " 支付成功，合计 ¥"
+                            + (p.getTotalPrice() != null ? p.getTotalPrice() : BigDecimal.ZERO)
+                            + "，等待卖家发货。", "order", purchaseId);
+        } catch (Exception ignore) { }
+        return true;
     }
 
     @Override

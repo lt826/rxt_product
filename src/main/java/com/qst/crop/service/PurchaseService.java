@@ -7,8 +7,11 @@ import com.qst.crop.model.ShipDTO;
 import java.util.List;
 
 public interface PurchaseService {
-    /** 买家下单 */
+    /** 买家下单（订单进入待付款状态，待支付确认后转待发货） */
     Integer createOrder(String buyerName, CreateOrderDTO dto);
+
+    /** 支付确认：把订单由待付款置为待发货，并通知卖家发货（幂等） */
+    boolean markPaid(Integer purchaseId, String buyerName);
 
     /** 买家"我买到的"订单 */
     List<OrderVO> listBought(String buyerName);

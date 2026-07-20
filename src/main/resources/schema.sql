@@ -380,3 +380,17 @@ CREATE TABLE tb_match_rule (
     update_time        DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='匹配规则权重配置表';
+
+-- ==============================================
+-- 20. 首页精选内容表
+-- ==============================================
+DROP TABLE IF EXISTS tb_homepage_feature;
+CREATE TABLE tb_homepage_feature (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    section_key VARCHAR(32)  NOT NULL COMMENT '板块: finance/expert/answer/knowledge/goods',
+    ref_id      VARCHAR(64)  NOT NULL COMMENT '关联主键(专家为user_name,其余为数字id)',
+    sort_order  INT          NOT NULL DEFAULT 0 COMMENT '展示顺序,升序',
+    create_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_section_ref (section_key, ref_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='首页各板块精选内容';

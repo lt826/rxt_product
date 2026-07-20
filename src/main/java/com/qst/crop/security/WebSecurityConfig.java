@@ -63,6 +63,10 @@ public class WebSecurityConfig {
                         // 买家工作台：需要 BUYER 或 ADMIN 角色
                         .requestMatchers("/api/v1/buyer/**").hasAnyRole("BUYER", "ADMIN")
 
+                        // 首页精选内容：列表公开（未登录访客可看），配置仅管理员
+                        .requestMatchers("/api/v1/homepage-feature/list").permitAll()
+                        .requestMatchers("/api/v1/homepage-feature/section/**").hasRole("ADMIN")
+
                         // 认证接口：其他所有请求都需要登录
                         .anyRequest().authenticated()
                 )
