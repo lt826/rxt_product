@@ -72,10 +72,7 @@ async function handleCancel(apt) {
 }
 
 function getAvatar(name) {
-  const avatars = ['👨‍🏫','👩‍🔬','👨‍🌾','👩‍🌾','🧑‍🔬','👨‍💼','👩‍💼','👨‍🔧','👩‍🔧','🧑‍🏫']
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = ((hash << 5) - hash) + name.charCodeAt(i)
-  return avatars[Math.abs(hash) % avatars.length]
+  return String(name || '专').trim().charAt(0).toUpperCase()
 }
 
 onMounted(async () => { await loadExperts(); await loadAppointments() })
@@ -124,10 +121,10 @@ onMounted(async () => { await loadExperts(); await loadAppointments() })
             <span class="apt-expert">{{ apt.expertRealName || '专家' }}</span>
             <el-tag :type="getStatusType(apt.status)" size="small">{{ getStatusText(apt.status) }}</el-tag>
           </div>
-          <div class="apt-detail">📍 {{ apt.address }}</div>
-          <div class="apt-detail">🕐 {{ apt.appointmentTime ? apt.appointmentTime.replace('T', ' ') : '-' }}</div>
-          <div v-if="apt.description" class="apt-detail">📝 {{ apt.description }}</div>
-          <div v-if="apt.reply" class="apt-reply">💬 {{ apt.reply }}</div>
+          <div class="apt-detail"><el-icon><Location /></el-icon><span>{{ apt.address }}</span></div>
+          <div class="apt-detail"><el-icon><Clock /></el-icon><span>{{ apt.appointmentTime ? apt.appointmentTime.replace('T', ' ') : '-' }}</span></div>
+          <div v-if="apt.description" class="apt-detail"><el-icon><Document /></el-icon><span>{{ apt.description }}</span></div>
+          <div v-if="apt.reply" class="apt-reply"><el-icon><ChatDotRound /></el-icon><span>{{ apt.reply }}</span></div>
           <div v-if="apt.status === 'pending' || apt.status === 'approved'" class="apt-actions">
             <el-button size="small" type="danger" link @click="handleCancel(apt)">取消预约</el-button>
           </div>
@@ -178,7 +175,19 @@ onMounted(async () => { await loadExperts(); await loadAppointments() })
   transition: background 0.2s;
 }
 .expert-item:hover { background: var(--green-mist); }
-.expert-item-avatar { font-size: 36px; }
+.expert-item-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), var(--green-light));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
 .expert-item-name { font-weight: 600; color: var(--text); font-size: 15px; }
 .expert-item-detail { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
 
@@ -190,7 +199,26 @@ onMounted(async () => { await loadExperts(); await loadAppointments() })
 }
 .apt-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .apt-expert { font-weight: 600; color: var(--text); }
-.apt-detail { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
-.apt-reply { margin-top: 8px; padding: 10px 14px; background: var(--green-mist); border-radius: var(--radius-sm); font-size: 14px; color: var(--green); }
+.apt-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.apt-detail .el-icon { color: var(--green); font-size: 15px; flex-shrink: 0; }
+.apt-reply {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 10px 14px;
+  background: var(--green-mist);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--green);
+}
+.apt-reply .el-icon { font-size: 15px; flex-shrink: 0; margin-top: 2px; }
 .apt-actions { margin-top: 8px; }
 </style>

@@ -57,7 +57,7 @@ onMounted(loadDashboard)
     <!-- Welcome -->
     <div class="dash-welcome">
       <div>
-        <h2 class="welcome-greeting">买家首页 👋</h2>
+        <h2 class="welcome-greeting">买家首页</h2>
         <p class="welcome-sub">你好，{{ userName }}，以下是你的业务概览</p>
       </div>
       <div style="display:flex;gap:8px">

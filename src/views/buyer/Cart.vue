@@ -73,7 +73,7 @@ onMounted(async () => {
     </div>
 
     <div v-if="cart.length === 0" class="cart-empty">
-      <div class="empty-icon">🛒</div>
+      <div class="empty-icon"><el-icon :size="72"><ShoppingCart /></el-icon></div>
       <h3>购物车是空的</h3>
       <p>快去挑选心仪的农产品吧</p>
       <el-button type="primary" size="large" @click="router.push('/buyer/products')">去逛逛</el-button>
@@ -91,7 +91,7 @@ onMounted(async () => {
               :src="item.picture"
               :alt="item.title"
             />
-            <span v-else>{{ ['🥔','🍑','🍌','🥬','🍄','🌽','🍎','🍇'][(item.id % 8)] }}</span>
+            <span v-else class="thumb-mono">{{ (item.title || item.name || '品').trim().charAt(0) }}</span>
           </div>
           <div class="item-info">
             <h4 class="item-name">{{ item.title || item.name || '商品' }}</h4>
@@ -164,7 +164,7 @@ onMounted(async () => {
   padding: 80px 0;
 }
 .empty-icon {
-  font-size: 80px;
+  color: var(--green-light);
   margin-bottom: 20px;
 }
 .cart-empty h3 {
@@ -216,6 +216,11 @@ onMounted(async () => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.thumb-mono {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--green-deep);
 }
 .item-info { flex: 1; min-width: 0; }
 .item-name {

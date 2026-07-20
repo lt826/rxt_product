@@ -1,8 +1,10 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../../stores/user'
+import LogoMark from '../../components/LogoMark.vue'
+import RoleGlyph from '../../components/RoleGlyph.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -18,11 +20,11 @@ const form = reactive({
 })
 
 const roles = [
-  { value: 'farmer', label: '农户', icon: '🌾' },
-  { value: 'buyer', label: '买家', icon: '🛒' },
-  { value: 'bank', label: '银行', icon: '🏦' },
-  { value: 'expert', label: '专家', icon: '👨‍🔬' },
-  { value: 'admin', label: '管理', icon: '⚙️' }
+  { value: 'farmer', label: '农户' },
+  { value: 'buyer', label: '买家' },
+  { value: 'bank', label: '银行' },
+  { value: 'expert', label: '专家' },
+  { value: 'admin', label: '管理' }
 ]
 
 const rules = {
@@ -50,56 +52,35 @@ async function handleLogin() {
 function goToRegister() {
   router.push('/register')
 }
-
-// Floating particles
-const particles = ref([])
-onMounted(() => {
-  particles.value = Array.from({ length: 20 }, (_, i) => ({
-    id: i,
-    size: Math.random() * 6 + 2,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    duration: Math.random() * 20 + 15,
-    delay: Math.random() * 10
-  }))
-})
 </script>
 
 <template>
   <div class="login-page">
-    <!-- Animated background -->
+    <!-- 背景：纯渐变 + 极淡网格纹理，去掉漂浮粒子动画 -->
     <div class="bg-layer">
       <div class="bg-gradient"></div>
       <div class="bg-pattern"></div>
-      <div v-for="p in particles" :key="p.id" class="particle" :style="{
-        width: p.size + 'px',
-        height: p.size + 'px',
-        left: p.x + '%',
-        top: p.y + '%',
-        animationDuration: p.duration + 's',
-        animationDelay: p.delay + 's'
-      }"></div>
     </div>
 
     <div class="login-container">
       <!-- Left: branding -->
       <div class="login-branding">
-        <div class="brand-icon">🌾</div>
+        <div class="brand-icon"><LogoMark :size="56" /></div>
         <h1>融销通</h1>
         <p class="brand-sub">农产品融销一体平台</p>
         <p class="brand-desc">融通资金 · 链接产销 · 智汇农业</p>
         <div class="brand-stats">
           <div class="stat-item">
-            <div class="stat-num">5000+</div>
-            <div class="stat-label">注册农户</div>
+            <div class="stat-num">融资</div>
+            <div class="stat-label">银行信贷对接</div>
           </div>
           <div class="stat-item">
-            <div class="stat-num">200+</div>
-            <div class="stat-label">融资产品</div>
+            <div class="stat-num">产销</div>
+            <div class="stat-label">农产品直达买家</div>
           </div>
           <div class="stat-item">
-            <div class="stat-num">50+</div>
-            <div class="stat-label">农业专家</div>
+            <div class="stat-num">农技</div>
+            <div class="stat-label">专家在线指导</div>
           </div>
         </div>
       </div>
@@ -121,7 +102,7 @@ onMounted(() => {
               :class="{ active: form.role === r.value }"
               @click="form.role = r.value"
             >
-              <span class="pill-icon">{{ r.icon }}</span>
+              <span class="pill-icon"><RoleGlyph :role="r.value" :size="22" /></span>
               <span class="pill-label">{{ r.label }}</span>
             </div>
           </div>
@@ -179,7 +160,7 @@ onMounted(() => {
   padding: 24px;
 }
 
-/* ===== Animated Background ===== */
+/* ===== Background ===== */
 .bg-layer {
   position: fixed;
   inset: 0;
@@ -194,18 +175,6 @@ onMounted(() => {
   position: absolute;
   inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M40 0v80M0 40h80' stroke='%23ffffff' stroke-opacity='0.03' stroke-width='1'/%3E%3C/svg%3E");
-}
-.particle {
-  position: absolute;
-  background: rgba(255,255,255,0.08);
-  border-radius: 50%;
-  animation: float linear infinite;
-}
-@keyframes float {
-  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
 }
 
 /* ===== Container ===== */
@@ -246,7 +215,7 @@ onMounted(() => {
   background: radial-gradient(circle at 30% 40%, rgba(82,183,136,0.2), transparent 60%);
 }
 .brand-icon {
-  font-size: 64px;
+  color: #fff;
   margin-bottom: 20px;
   position: relative;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
@@ -280,14 +249,15 @@ onMounted(() => {
   text-align: center;
 }
 .stat-num {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1.2;
+  letter-spacing: 0.04em;
 }
 .stat-label {
   font-size: 12px;
   opacity: 0.7;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 /* ===== Right Form Panel ===== */
@@ -342,8 +312,14 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(45,106,79,0.15);
 }
 .pill-icon {
-  font-size: 20px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
+}
+.role-pill.active .pill-icon {
+  color: var(--green);
 }
 .pill-label {
   font-size: 11px;
@@ -403,7 +379,7 @@ onMounted(() => {
     gap: 24px;
   }
   .stat-num {
-    font-size: 22px;
+    font-size: 20px;
   }
   .login-form-panel {
     width: 100%;

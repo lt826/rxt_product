@@ -106,7 +106,7 @@ function clearPollTimer() { if (pollTimer) { clearInterval(pollTimer); pollTimer
         <el-empty description="暂无对话" :image-size="80" />
       </div>
       <div v-for="conv in conversations" :key="conv.sender" class="conversation-item" @click="openChat(conv)">
-        <div class="conv-avatar">👨‍🌾</div>
+        <div class="conv-avatar">{{ (conv.partnerName || conv.sender || '农').trim().charAt(0) }}</div>
         <div class="conv-body">
           <div class="conv-header">
             <span class="conv-name">{{ conv.partnerName }}</span>
@@ -145,7 +145,19 @@ function clearPollTimer() { if (pollTimer) { clearInterval(pollTimer); pollTimer
 .page-sub { font-size: 14px; color: var(--text-muted); margin: 0; }
 .conversation-item { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s; }
 .conversation-item:hover { background: var(--bg); }
-.conv-avatar { font-size: 32px; }
+.conv-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), var(--green-light));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
 .conv-body { flex: 1; min-width: 0; }
 .conv-header { display: flex; justify-content: space-between; align-items: center; }
 .conv-name { font-weight: 500; color: var(--text); }

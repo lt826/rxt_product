@@ -211,7 +211,7 @@ function buildChartOption() {
   <div class="dashboard">
     <div class="dash-welcome">
       <div>
-        <h2 class="welcome-greeting">系统管理面板 📊</h2>
+        <h2 class="welcome-greeting">系统管理面板</h2>
         <p class="welcome-sub">平台运营数据概览</p>
       </div>
       <el-button type="primary" @click="router.push('/admin/users')">用户管理 →</el-button>

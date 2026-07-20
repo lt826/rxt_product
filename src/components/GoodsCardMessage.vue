@@ -24,7 +24,7 @@ function addToCart() {
   <div class="gcm-card">
     <div class="gcm-thumb">
       <img v-if="card.picture && card.picture.startsWith('http')" :src="card.picture" :alt="card.title" />
-      <span v-else>📦</span>
+      <span v-else class="gcm-mono">{{ String(card.title || '品').trim().charAt(0) }}</span>
     </div>
     <div class="gcm-info">
       <div class="gcm-title">{{ card.title }}</div>
@@ -63,6 +63,7 @@ function addToCart() {
   font-size: 28px;
 }
 .gcm-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.gcm-mono { font-size: 26px; font-weight: 700; color: var(--green-deep); }
 .gcm-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .gcm-title {
   font-size: 14px;

@@ -89,9 +89,9 @@ onMounted(loadAppointments)
           <div class="apt-farmer">
             <el-icon><User /></el-icon> {{ apt.farmerName }}
           </div>
-          <div class="apt-line">📍 {{ apt.address }}</div>
-          <div class="apt-line">🕐 {{ apt.appointmentTime ? apt.appointmentTime.replace('T', ' ') : '-' }}</div>
-          <div v-if="apt.description" class="apt-line muted">📝 {{ apt.description }}</div>
+          <div class="apt-line"><el-icon><Location /></el-icon><span>{{ apt.address }}</span></div>
+          <div class="apt-line"><el-icon><Clock /></el-icon><span>{{ apt.appointmentTime ? apt.appointmentTime.replace('T', ' ') : '-' }}</span></div>
+          <div v-if="apt.description" class="apt-line muted"><el-icon><Document /></el-icon><span>{{ apt.description }}</span></div>
         </div>
         <div class="apt-side">
           <el-tag :type="getStatusType(apt.status)" size="small">{{ getStatusText(apt.status) }}</el-tag>
@@ -131,6 +131,8 @@ onMounted(loadAppointments)
 .apt-main { flex: 1; }
 .apt-farmer { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
 .apt-line { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; font-size: 14px; color: var(--text-secondary); }
+.apt-line .el-icon { color: var(--green); font-size: 15px; flex-shrink: 0; }
+.apt-line.muted .el-icon { color: var(--text-muted); }
 .muted { color: var(--text-muted); font-size: 13px; }
 .apt-side { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; flex-shrink: 0; }
 .apt-actions { display: flex; gap: 8px; }

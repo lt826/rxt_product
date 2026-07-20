@@ -5,6 +5,7 @@ import { useUserStore } from '../stores/user'
 import { useMessageStore } from '../stores/message'
 import { ElMessageBox } from 'element-plus'
 import { Bell, ArrowDown } from '@element-plus/icons-vue'
+import LogoMark from '../components/LogoMark.vue'
 import { getUnreadNotificationCountAPI, getMyNotificationsAPI, markNotificationReadAPI, markAllNotificationsReadAPI } from '../api/notification'
 
 const route = useRoute()
@@ -242,7 +243,7 @@ onUnmounted(() => {
     <header class="app-header">
       <div class="header-left">
         <div class="logo-mark" @click="goHome" style="cursor:pointer">
-          <span class="logo-leaf">🌾</span>
+          <span class="logo-leaf"><LogoMark :size="22" /></span>
           <span class="logo-word">融销通</span>
         </div>
         <el-divider direction="vertical" />
@@ -359,7 +360,9 @@ onUnmounted(() => {
 }
 .logo-mark:hover { opacity: 0.7; }
 .logo-leaf {
-  font-size: 24px;
+  color: var(--green);
+  display: flex;
+  align-items: center;
 }
 .logo-word {
   font-size: 18px;

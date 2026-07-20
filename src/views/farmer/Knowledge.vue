@@ -49,7 +49,7 @@ function openArticle(a) {
       <div v-for="article in articles" :key="article.id" class="agri-card" @click="openArticle(article)">
         <div class="agri-thumb">
           <img v-if="article.pic && article.pic.startsWith('http')" :src="article.pic" :alt="article.title" @error="article.pic = ''" />
-          <span v-else>🌾</span>
+          <el-icon v-else class="agri-thumb-icon"><Reading /></el-icon>
         </div>
         <div class="agri-card-body">
           <h3 class="agri-title">{{ article.title }}</h3>
@@ -108,12 +108,13 @@ function openArticle(a) {
   flex-shrink: 0;
   border-radius: var(--radius-sm);
   overflow: hidden;
-  background: var(--bg);
+  background: var(--green-mist);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 40px;
 }
+.agri-thumb-icon { color: var(--green); font-size: 44px; }
 .agri-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .agri-card-body {
   flex: 1;

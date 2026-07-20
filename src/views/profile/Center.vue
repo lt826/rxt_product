@@ -68,21 +68,21 @@ onMounted(loadProfile)
 
 const roleMenuLinks = {
   farmer: [
-    { label: '商品货源管理', path: '/profile/my-products', icon: '📦' },
-    { label: '我的订单', path: '/farmer/orders', icon: '📄' },
-    { label: '我的融资管理', path: '/profile/my-financing', icon: '💰' }
+    { label: '商品货源管理', path: '/profile/my-products', icon: 'Goods' },
+    { label: '我的订单', path: '/farmer/orders', icon: 'Document' },
+    { label: '我的融资管理', path: '/profile/my-financing', icon: 'Coin' }
   ],
   buyer: [
-    { label: '我的订单', path: '/buyer/orders', icon: '📄' },
-    { label: '收货地址管理', path: '/profile/address', icon: '📍' }
+    { label: '我的订单', path: '/buyer/orders', icon: 'Document' },
+    { label: '收货地址管理', path: '/profile/address', icon: 'Location' }
   ],
   expert: [
-    { label: '问答管理', path: '/profile/my-qa', icon: '💬' },
-    { label: '预约管理', path: '/profile/my-appointments', icon: '📅' },
-    { label: '知识管理', path: '/profile/my-knowledge', icon: '📚' }
+    { label: '问答管理', path: '/profile/my-qa', icon: 'ChatDotRound' },
+    { label: '预约管理', path: '/profile/my-appointments', icon: 'Calendar' },
+    { label: '知识管理', path: '/profile/my-knowledge', icon: 'Reading' }
   ],
   bank: [
-    { label: '贷款审批', path: '/profile/bank/approval', icon: '✅' }
+    { label: '贷款审批', path: '/profile/bank/approval', icon: 'DocumentChecked' }
   ],
   admin: []
 }
@@ -154,7 +154,7 @@ function def(v) { return (v === null || v === undefined || v === '') ? '-' : v }
       <h3 style="margin:24px 0 12px">快捷入口</h3>
       <div class="quick-grid">
         <div v-for="link in menuLinks" :key="link.path" class="quick-card" @click="router.push(link.path)">
-          <span class="quick-icon">{{ link.icon }}</span>
+          <el-icon class="quick-icon"><component :is="link.icon" /></el-icon>
           <span class="quick-label">{{ link.label }}</span>
         </div>
       </div>
@@ -191,7 +191,7 @@ function def(v) { return (v === null || v === undefined || v === '') ? '-' : v }
 }
 .quick-card { background: #f9fafb; border: 1px solid #eee; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
 .quick-card:hover { border-color: #488d37; box-shadow: 0 2px 8px rgba(72,141,55,0.1); }
-.quick-icon { display: block; font-size: 32px; margin-bottom: 8px; }
+.quick-icon { display: block; font-size: 28px; color: var(--green); margin-bottom: 8px; }
 .quick-label { font-size: 14px; color: #555; }
 
 /* 基础信息 el-descriptions：标签列加宽 + 基线对齐，消除“标签窄内容宽” */

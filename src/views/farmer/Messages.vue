@@ -242,7 +242,7 @@ onUnmounted(() => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null 
             @click.stop
           />
           <span v-else class="conv-dot" title="未读"></span>
-          <div class="conv-avatar">📦</div>
+          <div class="conv-avatar">{{ (conv.partnerName || conv.sender || '客').trim().charAt(0) }}</div>
           <div class="conv-body" @click="openChat(conv)">
             <div class="conv-header">
               <span class="conv-name">{{ conv.partnerName || conv.sender }}</span>
@@ -294,7 +294,7 @@ onUnmounted(() => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null 
           <div v-for="g in myGoods" :key="g.goodsId" class="pick-goods-item" @click="sendGoods(g)">
             <div class="pick-thumb">
               <img v-if="g.picture && g.picture.startsWith('http')" :src="g.picture" :alt="g.title" />
-              <span v-else>📦</span>
+              <span v-else class="pick-mono">{{ String(g.title || '品').trim().charAt(0) }}</span>
             </div>
             <div class="pick-info">
               <div class="pick-title">{{ g.title }}</div>
@@ -331,7 +331,19 @@ onUnmounted(() => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null 
 .conversation-item.selected { background: #fef0f0; border-radius: 8px; }
 .conv-check { flex-shrink: 0; }
 .conv-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
-.conv-avatar { font-size: 30px; }
+.conv-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), var(--green-light));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
 .conv-body { flex: 1; min-width: 0; cursor: pointer; }
 .conv-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .conv-name { font-weight: 600; color: var(--text); }
@@ -358,6 +370,7 @@ onUnmounted(() => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null 
 .pick-goods-item:hover { background: var(--green-mist); border-color: var(--green); }
 .pick-thumb { width: 48px; height: 48px; flex-shrink: 0; border-radius: 6px; overflow: hidden; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 24px; }
 .pick-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.pick-mono { font-size: 22px; font-weight: 700; color: var(--green-deep); }
 .pick-info { flex: 1; min-width: 0; }
 .pick-title { font-size: 14px; font-weight: 600; color: var(--text); }
 .pick-price { font-size: 13px; color: var(--amber); font-weight: 600; margin-top: 2px; }

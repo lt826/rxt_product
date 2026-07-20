@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { getGoodsListAPI } from '../../api/goods'
 import { getKnowledgeListAPI } from '../../api/knowledge'
 import { getExpertListAPI } from '../../api/expert'
+import LogoMark from '../../components/LogoMark.vue'
+import RoleGlyph from '../../components/RoleGlyph.vue'
 
 const router = useRouter()
 
@@ -13,17 +15,17 @@ const knowledgeItems = ref([])
 const loading = ref(true)
 
 const roles = [
-  { id: 'farmer', label: '农户端', icon: '🌾', desc: '融资申请 · 商品管理 · 专家咨询', color: '#2d6a4f' },
-  { id: 'buyer', label: '买家端', icon: '🛒', desc: '浏览商品 · 发布需求 · 直连农户', color: '#409160' },
-  { id: 'bank', label: '银行端', icon: '🏦', desc: '融资审批 · 智能匹配 · 风控管理', color: '#1a5e8a' },
-  { id: 'expert', label: '专家端', icon: '👨‍🔬', desc: '知识发布 · 问答处理 · 预约管理', color: '#5d4037' }
+  { id: 'farmer', label: '农户端', desc: '融资申请 · 商品管理 · 专家咨询', color: '#2d6a4f' },
+  { id: 'buyer', label: '买家端', desc: '浏览商品 · 发布需求 · 直连农户', color: '#409160' },
+  { id: 'bank', label: '银行端', desc: '融资审批 · 智能匹配 · 风控管理', color: '#1a5e8a' },
+  { id: 'expert', label: '专家端', desc: '知识发布 · 问答处理 · 预约管理', color: '#5d4037' }
 ]
 
 const financeProducts = [
-  { bank: '中国农业银行', name: '种植贷', money: '100,000', desc: '最高可申请额度', icon: '🌿' },
-  { bank: '中国工商银行', name: '创业贷', money: '750,000', desc: '最高可申请额度', icon: '🚜' },
-  { bank: '中国建设银行', name: '设备贷', money: '150,000', desc: '最高可申请额度', icon: '🏗️' },
-  { bank: '中国农业银行', name: '发展贷', money: '500,000', desc: '最高可申请额度', icon: '🌻' }
+  { bank: '中国农业银行', name: '种植贷', money: '100,000', desc: '最高可申请额度', icon: 'Coin' },
+  { bank: '中国工商银行', name: '创业贷', money: '750,000', desc: '最高可申请额度', icon: 'Money' },
+  { bank: '中国建设银行', name: '设备贷', money: '150,000', desc: '最高可申请额度', icon: 'Wallet' },
+  { bank: '中国农业银行', name: '发展贷', money: '500,000', desc: '最高可申请额度', icon: 'CreditCard' }
 ]
 
 const qaItems = [
@@ -33,17 +35,17 @@ const qaItems = [
 ]
 
 const knowledgeItemsStatic = [
-  { title: '水稻种植的害虫防治', content: '采取"预防为主，综合防治"策略。主要虫害包括稻飞虱、稻纵卷叶螟、二化螟等。通过农业防治、生物防治、物理防治、化学防治综合运用，有效控制虫害危害。', icon: '🌾' },
-  { title: '玉米种植过程详解', content: '选种与整地：选择适合当地气候的优质品种。播种前深耕土壤25-30厘米，结合施用腐熟农家肥配复合肥。采用机械化精量播种，控制行距60厘米。', icon: '🌽' },
-  { title: '蔬菜大棚温湿度管理', content: '不同季节温室大棚温湿度管理要点不同。春季注意保温防霜冻，夏季加强通风降温，秋季控水增光，冬季做好防寒保暖工作。', icon: '🥬' }
+  { title: '水稻种植的害虫防治', content: '采取"预防为主，综合防治"策略。主要虫害包括稻飞虱、稻纵卷叶螟、二化螟等。通过农业防治、生物防治、物理防治、化学防治综合运用，有效控制虫害危害。' },
+  { title: '玉米种植过程详解', content: '选种与整地：选择适合当地气候的优质品种。播种前深耕土壤25-30厘米，结合施用腐熟农家肥配复合肥。采用机械化精量播种，控制行距60厘米。' },
+  { title: '蔬菜大棚温湿度管理', content: '不同季节温室大棚温湿度管理要点不同。春季注意保温防霜冻，夏季加强通风降温，秋季控水增光，冬季做好防寒保暖工作。' }
 ]
 
 const shopFallback = [
-  { name: '红薯淀粉·农家自制', price: '¥223.00', icon: '🥔' },
-  { name: '新疆伊犁小红杏·4斤装', price: '¥43.00', icon: '🍑' },
-  { name: '高山甜香蕉·当季新鲜', price: '¥23.00', icon: '🍌' },
-  { name: '山东大葱·时令蔬菜5斤', price: '¥34.00', icon: '🥬' },
-  { name: '大别山野生羊肚菌', price: '¥345.00', icon: '🍄' }
+  { name: '红薯淀粉·农家自制', price: '¥223.00' },
+  { name: '新疆伊犁小红杏·4斤装', price: '¥43.00' },
+  { name: '高山甜香蕉·当季新鲜', price: '¥23.00' },
+  { name: '山东大葱·时令蔬菜5斤', price: '¥34.00' },
+  { name: '大别山野生羊肚菌', price: '¥345.00' }
 ]
 
 const expertsFallback = [
@@ -54,6 +56,11 @@ const expertsFallback = [
   { name: '李依敏', specialty: '农学', org: '农村经济合作站', title: '高级工程师' }
 ]
 
+function mono(text) {
+  const t = String(text || '').trim()
+  return t ? t.charAt(0) : '农'
+}
+
 onMounted(async () => {
   loading.value = true
   try {
@@ -63,17 +70,15 @@ onMounted(async () => {
       getExpertListAPI()
     ])
     if (goodsRes.status === 'fulfilled' && goodsRes.value?.code === 200 && goodsRes.value.data?.length > 0) {
-      shopItems.value = goodsRes.value.data.slice(0, 5).map((g, i) => ({
-        id: g.goodsId, name: g.title, price: g.price ? `¥${g.price}` : '面议',
-        icon: ['🥔','🍑','🍌','🥬','🍄'][i]
+      shopItems.value = goodsRes.value.data.slice(0, 5).map((g) => ({
+        id: g.goodsId, name: g.title, price: g.price ? `¥${g.price}` : '面议'
       }))
     } else {
       shopItems.value = shopFallback
     }
     if (knowRes.status === 'fulfilled' && knowRes.value?.code === 200 && knowRes.value.data?.length > 0) {
-      knowledgeItems.value = knowRes.value.data.slice(0, 3).map((k, i) => ({
-        id: k.knowledgeId, title: k.title, content: k.content,
-        icon: ['🌾','🌽','🥬'][i]
+      knowledgeItems.value = knowRes.value.data.slice(0, 3).map((k) => ({
+        id: k.knowledgeId, title: k.title, content: k.content
       }))
     } else {
       knowledgeItems.value = knowledgeItemsStatic
@@ -107,7 +112,7 @@ function enterRole(roleId) {
         <div class="hero-wave"></div>
       </div>
       <div class="hero-content">
-        <div class="hero-badge">🌾 数字经济 · 智慧农业</div>
+        <div class="hero-badge"><LogoMark :size="15" /> 数字经济 · 智慧农业</div>
         <h1>农产品融销一体平台</h1>
         <p class="hero-sub">融通资金 · 链接产销 · 智汇农业</p>
         <p class="hero-desc">为农户、买家、银行、专家打造的一站式协同服务平台</p>
@@ -121,18 +126,18 @@ function enterRole(roleId) {
         </div>
         <div class="hero-stats">
           <div class="hero-stat">
-            <span class="stat-number">5,000+</span>
-            <span class="stat-text">注册农户</span>
+            <span class="stat-number">多角色</span>
+            <span class="stat-text">农户 · 买家 · 银行 · 专家协同</span>
           </div>
           <div class="hero-stat-divider"></div>
           <div class="hero-stat">
-            <span class="stat-number">200+</span>
-            <span class="stat-text">融资产品</span>
+            <span class="stat-number">一站式</span>
+            <span class="stat-text">融资 · 产销 · 农技全流程</span>
           </div>
           <div class="hero-stat-divider"></div>
           <div class="hero-stat">
-            <span class="stat-number">50+</span>
-            <span class="stat-text">农业专家</span>
+            <span class="stat-number">可追溯</span>
+            <span class="stat-text">发布 · 审批 · 交易 · 咨询</span>
           </div>
         </div>
       </div>
@@ -146,7 +151,9 @@ function enterRole(roleId) {
       </div>
       <div class="roles-grid">
         <div v-for="role in roles" :key="role.id" class="role-card" @click="enterRole(role.id)">
-          <div class="role-card-icon" :style="{ background: role.color + '18' }">{{ role.icon }}</div>
+          <div class="role-card-icon" :style="{ background: role.color + '18', color: role.color }">
+            <RoleGlyph :role="role.id" :size="32" />
+          </div>
           <h3>{{ role.label }}</h3>
           <p>{{ role.desc }}</p>
           <span class="role-arrow">进入 →</span>
@@ -162,7 +169,7 @@ function enterRole(roleId) {
       </div>
       <div class="finance-grid">
         <div v-for="(item, i) in financeProducts" :key="i" class="finance-card">
-          <div class="finance-icon">{{ item.icon }}</div>
+          <div class="finance-icon"><el-icon :size="34"><component :is="item.icon" /></el-icon></div>
           <div class="finance-bank">{{ item.bank }}</div>
           <h3>{{ item.name }}</h3>
           <div class="finance-amount">¥{{ item.money }}</div>
@@ -180,8 +187,8 @@ function enterRole(roleId) {
       </div>
       <div class="experts-grid">
         <div v-for="(ex, i) in experts" :key="i" class="expert-card">
-          <div class="expert-avatar" :style="{ background: ['#e8f5e9','#e3f2fd','#fff3e0','#f3e5f5','#e0f2f1'][i % 5] }">
-            {{ ['👨‍🏫','👩‍🔬','👨‍🌾','🧑‍🔬','👩‍🏫'][i % 5] }}
+          <div class="expert-avatar" :style="{ background: ['#e8f5e9','#e3f2fd','#fff3e0','#f3e5f5','#e0f2f1'][i % 5], color: ['#2e7d32','#1565c0','#ef6c00','#6a1b9a','#00695c'][i % 5] }">
+            {{ mono(ex.name) }}
           </div>
           <div class="expert-detail">
             <h4>{{ ex.name }}</h4>
@@ -197,7 +204,7 @@ function enterRole(roleId) {
     <!-- ===== 专家问答 ===== -->
     <section class="section section-qa" style="background: var(--bg)">
       <div class="section-head">
-        <span class="section-eyebrow">Q&A HIGHLIGHTS</span>
+        <span class="section-eyebrow">Q&amp;A HIGHLIGHTS</span>
         <h2>热门问答</h2>
       </div>
       <div class="qa-grid">
@@ -225,7 +232,7 @@ function enterRole(roleId) {
       </div>
       <div class="knowledge-grid">
         <div v-for="(item, i) in knowledgeItems" :key="i" class="knowledge-card">
-          <div class="knowledge-card-icon">{{ item.icon }}</div>
+          <div class="knowledge-card-icon"><el-icon :size="40"><Reading /></el-icon></div>
           <div class="knowledge-card-body">
             <h3>{{ item.title }}</h3>
             <p>{{ item.content ? (item.content.length > 100 ? item.content.substring(0, 100) + '…' : item.content) : '' }}</p>
@@ -243,7 +250,7 @@ function enterRole(roleId) {
       </div>
       <div class="shop-grid">
         <div v-for="(item, i) in shopItems" :key="i" class="shop-card" @click="item.id && router.push('/buyer/goods/' + item.id)">
-          <div class="shop-card-icon">{{ item.icon }}</div>
+          <div class="shop-card-icon">{{ mono(item.name) }}</div>
           <div class="shop-card-body">
             <div class="shop-card-name">{{ item.name }}</div>
             <div class="shop-card-price">{{ item.price }}</div>
@@ -259,7 +266,7 @@ function enterRole(roleId) {
     <footer class="site-footer">
       <div class="footer-inner">
         <div class="footer-brand">
-          <span class="footer-icon">🌾</span>
+          <span class="footer-icon" style="color:#fff"><LogoMark :size="22" /></span>
           <span class="footer-name">融销通</span>
         </div>
         <div class="footer-links">
@@ -306,17 +313,19 @@ function enterRole(roleId) {
   text-align: center;
   color: #fff;
   padding: 80px 24px 140px;
-  max-width: 700px;
+  max-width: 760px;
 }
 .hero-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   background: rgba(255,255,255,0.15);
   backdrop-filter: blur(10px);
-  padding: 6px 20px;
+  padding: 6px 18px;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   margin-bottom: 24px;
   border: 1px solid rgba(255,255,255,0.2);
 }
@@ -382,20 +391,21 @@ function enterRole(roleId) {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 32px;
+  gap: 28px;
 }
 .hero-stat { text-align: center; }
 .stat-number {
   display: block;
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 800;
   line-height: 1.2;
+  letter-spacing: 0.02em;
 }
 .stat-text {
   display: block;
-  font-size: 13px;
-  opacity: 0.7;
-  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.75;
+  margin-top: 6px;
 }
 .hero-stat-divider {
   width: 1px;
@@ -460,7 +470,6 @@ function enterRole(roleId) {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
   margin: 0 auto 16px;
 }
 .role-card h3 {
@@ -500,7 +509,17 @@ function enterRole(roleId) {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
-.finance-icon { font-size: 36px; margin-bottom: 12px; }
+.finance-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--green-mist);
+  color: var(--green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
 .finance-bank {
   font-size: 13px;
   font-weight: 600;
@@ -560,7 +579,8 @@ function enterRole(roleId) {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
+  font-size: 32px;
+  font-weight: 700;
   margin-bottom: 16px;
 }
 .expert-detail {
@@ -660,10 +680,10 @@ function enterRole(roleId) {
   width: 100px;
   min-height: 140px;
   background: var(--green-mist);
+  color: var(--green);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 48px;
   flex-shrink: 0;
 }
 .knowledge-card-body {
@@ -710,7 +730,9 @@ function enterRole(roleId) {
   align-items: center;
   justify-content: center;
   font-size: 56px;
-  background: var(--bg);
+  font-weight: 700;
+  color: var(--green-deep);
+  background: linear-gradient(135deg, var(--green-mist), #eef7f0);
 }
 .shop-card-body { padding: 12px 14px; }
 .shop-card-name {
@@ -748,7 +770,7 @@ function enterRole(roleId) {
   gap: 8px;
   margin-bottom: 16px;
 }
-.footer-icon { font-size: 24px; }
+.footer-icon { display: flex; align-items: center; }
 .footer-name {
   font-size: 20px;
   font-weight: 700;

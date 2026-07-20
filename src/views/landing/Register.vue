@@ -3,6 +3,8 @@ import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '../../stores/user'
+import LogoMark from '../../components/LogoMark.vue'
+import RoleGlyph from '../../components/RoleGlyph.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -23,11 +25,11 @@ const form = reactive({
 })
 
 const roles = [
-  { value: 'farmer', label: '农户', icon: '🌾' },
-  { value: 'buyer', label: '买家', icon: '🛒' },
-  { value: 'bank', label: '银行工作人员', icon: '🏦' },
-  { value: 'expert', label: '农业专家', icon: '👨‍🔬' },
-  { value: 'admin', label: '平台管理员', icon: '⚙️' }
+  { value: 'farmer', label: '农户' },
+  { value: 'buyer', label: '买家' },
+  { value: 'bank', label: '银行人员' },
+  { value: 'expert', label: '农业专家' },
+  { value: 'admin', label: '管理员' }
 ]
 
 const needsApproval = computed(() => {
@@ -102,33 +104,33 @@ async function handleRegister() {
     <div class="register-container">
       <!-- Left: info -->
       <div class="register-info">
-        <div class="info-icon">🌱</div>
+        <div class="info-icon"><LogoMark :size="48" /></div>
         <h2>加入融销通</h2>
         <p class="info-desc">开启你的智慧农业之旅</p>
         <div class="feature-list">
           <div class="feature-item">
-            <span class="feature-icon">💰</span>
+            <span class="feature-icon"><el-icon><Coin /></el-icon></span>
             <div>
               <strong>融资服务</strong>
               <span>对接多家银行，快速获取资金支持</span>
             </div>
           </div>
           <div class="feature-item">
-            <span class="feature-icon">📦</span>
+            <span class="feature-icon"><el-icon><Goods /></el-icon></span>
             <div>
               <strong>电商平台</strong>
               <span>一键上架，直达全国买家</span>
             </div>
           </div>
           <div class="feature-item">
-            <span class="feature-icon">👨‍🔬</span>
+            <span class="feature-icon"><el-icon><Service /></el-icon></span>
             <div>
               <strong>专家咨询</strong>
               <span>农业专家在线解答种植难题</span>
             </div>
           </div>
           <div class="feature-item">
-            <span class="feature-icon">📚</span>
+            <span class="feature-icon"><el-icon><Reading /></el-icon></span>
             <div>
               <strong>知识库</strong>
               <span>海量农业技术文章随时学习</span>
@@ -157,7 +159,7 @@ async function handleRegister() {
                 :class="{ active: form.role === r.value }"
                 @click="form.role = r.value"
               >
-                <span class="role-emoji">{{ r.icon }}</span>
+                <span class="role-glyph"><RoleGlyph :role="r.value" :size="24" /></span>
                 <span class="role-name">{{ r.label }}</span>
               </div>
             </div>
@@ -290,8 +292,11 @@ async function handleRegister() {
   text-align: center;
 }
 .info-icon {
-  font-size: 56px;
+  color: #fff;
   margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .register-info h2 {
   font-size: 28px;
@@ -317,7 +322,8 @@ async function handleRegister() {
   gap: 14px;
 }
 .feature-icon {
-  font-size: 28px;
+  color: rgba(255,255,255,0.92);
+  font-size: 22px;
   flex-shrink: 0;
   width: 44px;
   height: 44px;
@@ -414,8 +420,11 @@ async function handleRegister() {
   background: var(--green-mist);
   box-shadow: 0 2px 8px rgba(45,106,79,0.12);
 }
-.role-emoji {
-  font-size: 24px;
+.role-glyph {
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
 }
 .role-name {
@@ -423,6 +432,9 @@ async function handleRegister() {
   color: var(--text-secondary);
   margin-top: 6px;
   font-weight: 500;
+}
+.role-card.active .role-glyph {
+  color: var(--green);
 }
 .role-card.active .role-name {
   color: var(--green);

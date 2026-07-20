@@ -237,7 +237,7 @@ onUnmounted(() => {
           :class="{ 'has-unread': f.unreadCount > 0 }"
         >
           <div class="farmer-info">
-            <div class="farmer-avatar">👨‍🌾</div>
+            <div class="farmer-avatar">{{ (f.realName || f.nickName || f.userName || '农').trim().charAt(0) }}</div>
             <div class="farmer-text">
               <div class="farmer-name">
                 {{ f.realName || f.nickName || f.userName }}
@@ -269,7 +269,7 @@ onUnmounted(() => {
       <template #header>
         <div class="chat-header" @click="openProfile" title="点击查看农户资料">
           <el-avatar :size="40" :src="chatFarmer?.avatar" class="chat-header-avatar">
-            <span class="chat-header-emoji">👨‍🌾</span>
+            <span class="chat-header-emoji">{{ (chatFarmer?.realName || chatFarmer?.nickName || chatFarmer?.userName || '农').trim().charAt(0) }}</span>
           </el-avatar>
           <div class="chat-header-text">
             <div class="chat-header-name">{{ chatFarmer?.realName || chatFarmer?.nickName || chatFarmer?.userName || '' }}</div>
@@ -301,7 +301,7 @@ onUnmounted(() => {
       <div v-loading="profileLoading" class="profile-box">
         <div class="profile-top">
           <el-avatar :size="64" :src="profileUser?.avatar" class="profile-avatar">
-            <span class="chat-header-emoji">👨‍🌾</span>
+            <span class="chat-header-emoji">{{ (profileUser?.realName || profileUser?.nickName || profileUser?.userName || '农').trim().charAt(0) }}</span>
           </el-avatar>
           <div class="profile-name">{{ profileUser?.realName || profileUser?.nickName || profileUser?.userName || '-' }}</div>
           <el-tag size="small" type="success" effect="plain">农户</el-tag>
@@ -345,7 +345,19 @@ onUnmounted(() => {
 .farmer-card:last-child { border: none; }
 .farmer-card.has-unread { background: #fef0f0; border-left-color: var(--el-color-danger, #f56c6c); border-radius: 6px; }
 .farmer-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.farmer-avatar { font-size: 36px; flex-shrink: 0; }
+.farmer-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), var(--green-light));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
 .farmer-text { min-width: 0; }
 .farmer-name { font-weight: 600; color: var(--text); font-size: 15px; display: flex; align-items: center; gap: 8px; }
 .name-badge { margin-left: 4px; }
@@ -368,7 +380,7 @@ onUnmounted(() => {
 /* 聊天头部可点头像 */
 .chat-header { display: flex; align-items: center; gap: 12px; cursor: pointer; }
 .chat-header-avatar { flex-shrink: 0; background: linear-gradient(135deg, var(--green), var(--green-light)); }
-.chat-header-emoji { font-size: 22px; }
+.chat-header-emoji { color: #fff; font-size: 18px; font-weight: 700; }
 .chat-header-text { min-width: 0; }
 .chat-header-name { font-size: 16px; font-weight: 700; color: var(--text); }
 .chat-header-tip { font-size: 12px; color: var(--text-muted); margin-top: 2px; }

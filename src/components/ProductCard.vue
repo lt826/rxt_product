@@ -3,7 +3,7 @@
 // 图片为主，叠加「产地直供」信任标 + 产地徽标；下方品类、标题、描述、红色价格、加购按钮。
 import { ref, computed } from 'vue'
 import { ShoppingCart, Delete, Edit } from '@element-plus/icons-vue'
-import { parseCategory, cleanContent, formatPrice, emojiFor, shortAddress } from '../utils/goods'
+import { parseCategory, cleanContent, formatPrice, shortAddress } from '../utils/goods'
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -16,7 +16,6 @@ const props = defineProps({
 })
 const emit = defineEmits(['view', 'add-cart', 'delete', 'edit'])
 
-const gid = computed(() => props.item.goodsId ?? props.item.id)
 const category = computed(() => parseCategory(props.item.content) || '农产品')
 const desc = computed(() => cleanContent(props.item.content))
 const priceText = computed(() => formatPrice(props.item.price))
@@ -26,7 +25,8 @@ const hasImage = computed(() => {
   const p = props.item.picture
   return !!(p && /^https?:\/\//i.test(String(p)))
 })
-const emoji = computed(() => emojiFor(gid.value))
+// 无图时取标题首字做占位字标，替代此前的 emoji
+const mono = computed(() => String(props.item.title || '品').trim().charAt(0))
 const imgError = ref(false)
 
 function onView() {
@@ -57,7 +57,7 @@ function onImgError() {
         loading="lazy"
         @error="onImgError"
       />
-      <div v-else class="pc-emoji" :class="{ 'pc-emoji--manage': manageMode && canManage }">{{ emoji }}</div>
+      <div v-else class="pc-emoji" :class="{ 'pc-emoji--manage': manageMode && canManage }">{{ mono }}</div>
 
       <!-- 右上角：信任标 -->
       <span class="pc-chip pc-chip--trust">产地直供</span>
@@ -138,7 +138,9 @@ function onImgError() {
   align-items: center;
   justify-content: center;
   font-size: 64px;
-  filter: saturate(0.9);
+  font-weight: 800;
+  color: var(--green-deep);
+  opacity: 0.9;
 }
 .pc-emoji--manage {
   opacity: 0.85;

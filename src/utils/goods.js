@@ -26,12 +26,6 @@ export function formatPrice(price) {
   return /\.00$/.test(s) ? s.replace(/\.00$/, '') : s
 }
 
-const EMOJIS = ['🥔', '🍑', '🍌', '🥬', '🍄', '🌽', '🍎', '🍇', '🍅', '🥕', '🍓', '🍆']
-/** 根据 id 选一个稳定的占位 emoji（无图时用） */
-export function emojiFor(id) {
-  return EMOJIS[(Number(id) || 0) % EMOJIS.length]
-}
-
 /** 产地简化展示：最多取前 6 个字符（省/市级），便于做徽标 */
 export function shortAddress(address) {
   const s = String(address || '').trim()

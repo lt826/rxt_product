@@ -76,7 +76,7 @@ onMounted(async () => {
     <!-- Welcome header -->
     <div class="dash-welcome">
       <div>
-        <h2 class="welcome-greeting">你好，{{ userName }} 👋</h2>
+        <h2 class="welcome-greeting">你好，{{ userName }}</h2>
         <p class="welcome-sub">欢迎回来，以下是你的首页概览</p>
       </div>
     </div>

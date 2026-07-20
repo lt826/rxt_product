@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getGoodsDetailAPI } from '../../api/goods'
 import { useUserStore } from '../../stores/user'
 import { ElMessage } from 'element-plus'
-import { parseCategory, cleanContent, formatPrice, emojiFor } from '../../utils/goods'
+import { parseCategory, cleanContent, formatPrice } from '../../utils/goods'
 
 const route = useRoute()
 const router = useRouter()
@@ -23,7 +23,7 @@ const hasImage = computed(() => {
   const p = goods.value.picture
   return !!(p && /^https?:\/\//i.test(String(p)) && !imgBroken.value)
 })
-const emoji = computed(() => (goods.value ? emojiFor(goods.value.goodsId) : '🛒'))
+const mono = computed(() => (goods.value ? String(goods.value.title || '品').trim().charAt(0) : '品'))
 const isBuyer = computed(() => userStore.role === 'buyer')
 // 是否为该商品的发布农户（农户端查看自己的商品时可编辑）
 const isOwner = computed(() => !!(goods.value && userStore.userInfo?.userName && goods.value.ownName === userStore.userInfo.userName))
@@ -107,7 +107,7 @@ function editProduct() {
               class="detail-img"
               @error="imgBroken = true"
             />
-            <div v-else class="detail-emoji">{{ emoji }}</div>
+            <div v-else class="detail-emoji">{{ mono }}</div>
             <span class="detail-chip detail-chip--trust">产地直供</span>
           </div>
 
@@ -233,7 +233,10 @@ function editProduct() {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 130px;
+  font-size: 120px;
+  font-weight: 800;
+  color: var(--green-deep);
+  opacity: 0.85;
 }
 .detail-chip {
   position: absolute;

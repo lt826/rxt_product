@@ -72,7 +72,7 @@ onMounted(loadData)
   <div class="dashboard">
     <div class="dash-welcome">
       <div>
-        <h2 class="welcome-greeting">银行首页 🏦</h2>
+        <h2 class="welcome-greeting">银行首页</h2>
         <p class="welcome-sub">融资审批与业务管理</p>
       </div>
       <el-button type="primary" @click="router.push('/bank/products')">产品配置 →</el-button>
