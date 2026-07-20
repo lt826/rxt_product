@@ -101,7 +101,8 @@ const ROLE_MENU_MAP = {
     { path: '/admin/dashboard', label: '首页', icon: 'HomeFilled' },
     { path: '/admin/users', label: '用户管理', icon: 'UserFilled' },
     { path: '/admin/goods', label: '商品管理', icon: 'Goods' },
-    { path: '/admin/stats', label: '数据统计', icon: 'DataAnalysis' }
+    { path: '/admin/stats', label: '数据统计', icon: 'DataAnalysis' },
+    { path: '/admin/home-feature', label: '主页内容管理', icon: 'Star' }
   ]
 }
 

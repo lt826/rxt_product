@@ -11,7 +11,8 @@ const request = axios.create({
 const PUBLIC_PATHS = [
   'knowledge/list',
   'expert/list',
-  'goods/list'
+  'goods/list',
+  'homepage-feature/list'
 ]
 
 // 请求拦截器：自动注入 JWT Token

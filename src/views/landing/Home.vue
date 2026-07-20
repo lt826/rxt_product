@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { getGoodsListAPI } from '../../api/goods'
 import { getKnowledgeListAPI } from '../../api/knowledge'
 import { getExpertListAPI } from '../../api/expert'
+import { getHomeFeaturedAPI } from '../../api/homeFeature'
 import LogoMark from '../../components/LogoMark.vue'
 import RoleGlyph from '../../components/RoleGlyph.vue'
 
@@ -21,18 +22,18 @@ const roles = [
   { id: 'expert', label: '专家端', desc: '知识发布 · 问答处理 · 预约管理', color: '#5d4037' }
 ]
 
-const financeProducts = [
+const financeProducts = ref([
   { bank: '中国农业银行', name: '种植贷', money: '100,000', desc: '最高可申请额度', icon: 'Coin' },
   { bank: '中国工商银行', name: '创业贷', money: '750,000', desc: '最高可申请额度', icon: 'Money' },
   { bank: '中国建设银行', name: '设备贷', money: '150,000', desc: '最高可申请额度', icon: 'Wallet' },
   { bank: '中国农业银行', name: '发展贷', money: '500,000', desc: '最高可申请额度', icon: 'CreditCard' }
-]
+])
 
-const qaItems = [
+const qaItems = ref([
   { q: '草莓杂草如何防治？', a: '1）人工除草，在开花前进行；2）地膜覆盖除草；3）合理轮作，减少杂草基数。', expert: '张娟' },
   { q: '土豆应该怎么施肥？', a: '基肥占总施肥量的三分之二，以有机肥为基础配合磷钾肥。出苗后立即追施提苗肥。', expert: '张娟' },
   { q: '阳光玫瑰温度控制在多少度？', a: '大棚栽培时，温度控制在26-30℃，避免长时间超过35℃。夜间保持15-18℃。', expert: '高燕' }
-]
+])
 
 const knowledgeItemsStatic = [
   { title: '水稻种植的害虫防治', content: '采取"预防为主，综合防治"策略。主要虫害包括稻飞虱、稻纵卷叶螟、二化螟等。通过农业防治、生物防治、物理防治、化学防治综合运用，有效控制虫害危害。' },
@@ -64,31 +65,82 @@ function mono(text) {
 onMounted(async () => {
   loading.value = true
   try {
-    const [goodsRes, knowRes, expertRes] = await Promise.allSettled([
+    const [goodsRes, knowRes, expertRes, featuredRes] = await Promise.allSettled([
       getGoodsListAPI({ type: '1' }),
       getKnowledgeListAPI(),
-      getExpertListAPI()
+      getExpertListAPI(),
+      getHomeFeaturedAPI()
     ])
-    if (goodsRes.status === 'fulfilled' && goodsRes.value?.code === 200 && goodsRes.value.data?.length > 0) {
-      shopItems.value = goodsRes.value.data.slice(0, 5).map((g) => ({
-        id: g.goodsId, name: g.title, price: g.price ? `¥${g.price}` : '面议'
+
+    // 管理员精选内容（未配置或拉取失败则为空，各板块回退到默认内容）
+    const featured = featuredRes.status === 'fulfilled' && featuredRes.value?.code === 200
+      ? (featuredRes.value.data || {}) : {}
+    const fFinance = featured.finance || []
+    const fExpert = featured.expert || []
+    const fAnswer = featured.answer || []
+    const fKnowledge = featured.knowledge || []
+    const fGoods = featured.goods || []
+
+    // 专家用户名 -> 真实姓名（用于问答卡片展示专家名）
+    const expertApiList = expertRes.status === 'fulfilled' && expertRes.value?.code === 200
+      ? (expertRes.value.data || []) : []
+    const expertSource = fExpert.length ? fExpert : expertApiList
+    const expertNameMap = {}
+    expertSource.forEach(e => { if (e.userName) expertNameMap[e.userName] = e.realName || e.userName })
+
+    // 金融产品：有精选则覆盖，否则保持静态
+    if (fFinance.length) {
+      financeProducts.value = fFinance.slice(0, 4).map((p, i) => ({
+        bank: p.bankName || '金融服务',
+        name: p.name || '金融产品',
+        money: p.maxQuota != null ? Number(p.maxQuota).toLocaleString() : '0',
+        desc: p.rate != null ? `年利率 ${p.rate}%` : '最高可申请额度',
+        icon: ['Coin', 'Money', 'Wallet', 'CreditCard'][i % 4]
+      }))
+    }
+
+    // 专家：有精选则覆盖，否则走原接口，再否则静态兜底
+    if (fExpert.length) {
+      experts.value = fExpert.slice(0, 5).map(e => ({
+        name: e.realName || e.userName, specialty: e.profession || '农学', org: e.belong || '农科院', title: e.position || '专家'
+      }))
+    } else if (expertApiList.length > 0) {
+      experts.value = expertApiList.slice(0, 5).map(e => ({
+        name: e.realName || e.userName, specialty: e.specialty || '农学', org: e.org || '农科院', title: e.title || '专家'
       }))
     } else {
-      shopItems.value = shopFallback
+      experts.value = expertsFallback
     }
-    if (knowRes.status === 'fulfilled' && knowRes.value?.code === 200 && knowRes.value.data?.length > 0) {
+
+    // 热门问答：有精选则覆盖，否则保持静态
+    if (fAnswer.length) {
+      qaItems.value = fAnswer.slice(0, 3).map(q => ({
+        q: q.title || (q.question ? String(q.question).slice(0, 40) : '农业问答'),
+        a: q.answer || '',
+        expert: expertNameMap[q.expertName] || q.expertName || '专家'
+      }))
+    }
+
+    // 农业知识：有精选则覆盖，否则走原接口，再否则静态兜底
+    if (fKnowledge.length) {
+      knowledgeItems.value = fKnowledge.slice(0, 3).map(k => ({ id: k.knowledgeId, title: k.title, content: k.content }))
+    } else if (knowRes.status === 'fulfilled' && knowRes.value?.code === 200 && knowRes.value.data?.length > 0) {
       knowledgeItems.value = knowRes.value.data.slice(0, 3).map((k) => ({
         id: k.knowledgeId, title: k.title, content: k.content
       }))
     } else {
       knowledgeItems.value = knowledgeItemsStatic
     }
-    if (expertRes.status === 'fulfilled' && expertRes.value?.code === 200 && expertRes.value.data?.length > 0) {
-      experts.value = expertRes.value.data.slice(0, 5).map(e => ({
-        name: e.realName || e.userName, specialty: e.specialty || '农学', org: e.org || '农科院', title: e.title || '专家'
+
+    // 助农电商：有精选则覆盖，否则走原接口，再否则静态兜底
+    if (fGoods.length) {
+      shopItems.value = fGoods.slice(0, 5).map(g => ({ id: g.goodsId, name: g.title, price: g.price ? `¥${g.price}` : '面议' }))
+    } else if (goodsRes.status === 'fulfilled' && goodsRes.value?.code === 200 && goodsRes.value.data?.length > 0) {
+      shopItems.value = goodsRes.value.data.slice(0, 5).map((g) => ({
+        id: g.goodsId, name: g.title, price: g.price ? `¥${g.price}` : '面议'
       }))
     } else {
-      experts.value = expertsFallback
+      shopItems.value = shopFallback
     }
   } catch {
     shopItems.value = shopFallback
