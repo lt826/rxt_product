@@ -5,6 +5,7 @@ import { getGoodsListAPI } from '../../api/goods'
 import { getKnowledgeListAPI } from '../../api/knowledge'
 import { getExpertListAPI } from '../../api/expert'
 import { getHomeFeaturedAPI } from '../../api/homeFeature'
+import { getCarouselListAPI } from '../../api/carousel'
 import LogoMark from '../../components/LogoMark.vue'
 import RoleGlyph from '../../components/RoleGlyph.vue'
 
@@ -57,41 +58,8 @@ const expertsFallback = [
   { name: '李依敏', specialty: '农学', org: '农村经济合作站', title: '高级工程师' }
 ]
 
-// 首页轮播图
-const carouselSlides = [
-  {
-    title: '农产品融销一体平台',
-    sub: '融通资金 · 链接产销 · 智汇农业',
-    desc: '为农户、买家、银行、专家打造的一站式协同服务平台',
-    btn: '免费注册',
-    to: '/register',
-    bg: 'linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #52b788 100%)'
-  },
-  {
-    title: '助农金融 · 随借随还',
-    sub: '多家银行入驻，贷款快速审批',
-    desc: '种植贷、创业贷、设备贷，利率优惠，助力扩大生产',
-    btn: '了解金融产品',
-    to: '/login',
-    bg: 'linear-gradient(135deg, #143a5e 0%, #1a5e8a 55%, #4a90b8 100%)'
-  },
-  {
-    title: '产地直供 · 新鲜直达',
-    sub: '直连农户，源头发货',
-    desc: '海量优质农产品，省去中间环节，品质价格双重保障',
-    btn: '进入农产品交易',
-    to: '/buyer/products',
-    bg: 'linear-gradient(135deg, #9c4a1a 0%, #e67e22 55%, #f0a04b 100%)'
-  },
-  {
-    title: '专家在线 · 科学种植',
-    sub: '知识问答 · 上门预约',
-    desc: '农业专家团队在线答疑，提供专业种植与病害防治指导',
-    btn: '咨询专家',
-    to: '/login',
-    bg: 'linear-gradient(135deg, #3e2a28 0%, #6d4c41 55%, #a1887f 100%)'
-  }
-]
+// 首页轮播图（管理员上传，展示在平台入口上方，无图则隐藏）
+const carouselImages = ref([])
 
 function mono(text) {
   const t = String(text || '').trim()
@@ -101,12 +69,18 @@ function mono(text) {
 onMounted(async () => {
   loading.value = true
   try {
-    const [goodsRes, knowRes, expertRes, featuredRes] = await Promise.allSettled([
+    const [goodsRes, knowRes, expertRes, featuredRes, carouselRes] = await Promise.allSettled([
       getGoodsListAPI({ type: '1' }),
       getKnowledgeListAPI(),
       getExpertListAPI(),
-      getHomeFeaturedAPI()
+      getHomeFeaturedAPI(),
+      getCarouselListAPI()
     ])
+
+    // 首页轮播图（管理员上传）
+    if (carouselRes.status === 'fulfilled' && carouselRes.value?.code === 200) {
+      carouselImages.value = carouselRes.value.data || []
+    }
 
     // 管理员精选内容（未配置或拉取失败则为空，各板块回退到默认内容）
     const featured = featuredRes.status === 'fulfilled' && featuredRes.value?.code === 200
@@ -194,22 +168,6 @@ function enterRole(roleId) {
 
 <template>
   <div class="home-page">
-    <!-- ===== 轮播图 ===== -->
-    <section class="home-carousel">
-      <el-carousel height="500px" :interval="4500" arrow="hover">
-        <el-carousel-item v-for="(s, i) in carouselSlides" :key="i">
-          <div class="carousel-slide" :style="{ background: s.bg }">
-            <div class="carousel-content">
-              <h2 class="carousel-title">{{ s.title }}</h2>
-              <p class="carousel-sub">{{ s.sub }}</p>
-              <p class="carousel-desc">{{ s.desc }}</p>
-              <el-button size="large" class="carousel-btn" @click="router.push(s.to)">{{ s.btn }}</el-button>
-            </div>
-          </div>
-        </el-carousel-item>
-      </el-carousel>
-    </section>
-
     <!-- ===== Hero ===== -->
     <section class="hero">
       <div class="hero-bg">
@@ -245,6 +203,20 @@ function enterRole(roleId) {
           </div>
         </div>
       </div>
+    </section>
+
+    <!-- ===== 首页轮播图（管理员上传，每张 5 秒） ===== -->
+    <section v-if="carouselImages.length" class="home-banner">
+      <el-carousel height="340px" :interval="5000" arrow="hover">
+        <el-carousel-item v-for="(img, i) in carouselImages" :key="img.id || i">
+          <a v-if="img.link" :href="img.link" target="_blank" rel="noopener" class="banner-slide">
+            <img :src="img.imageUrl" :alt="'轮播图 ' + (i + 1)" class="banner-img" />
+          </a>
+          <div v-else class="banner-slide">
+            <img :src="img.imageUrl" :alt="'轮播图 ' + (i + 1)" class="banner-img" />
+          </div>
+        </el-carousel-item>
+      </el-carousel>
     </section>
 
     <!-- ===== 平台入口 ===== -->
@@ -391,72 +363,40 @@ function enterRole(roleId) {
   background: #fff;
 }
 
-/* ===== 轮播图 ===== */
-.home-carousel {
+/* ===== 首页轮播图 ===== */
+.home-banner {
   width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 24px 0;
+  box-sizing: border-box;
 }
-.home-carousel :deep(.el-carousel__indicators) {
-  bottom: 22px;
+.home-banner :deep(.el-carousel__container) {
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
-.home-carousel :deep(.el-carousel__indicator--horizontal button) {
-  background: rgba(255, 255, 255, 0.55);
+.home-banner :deep(.el-carousel__indicators) {
+  bottom: 16px;
 }
-.home-carousel :deep(.el-carousel__indicator--horizontal.is-active button) {
+.home-banner :deep(.el-carousel__indicator--horizontal button) {
+  background: rgba(255, 255, 255, 0.6);
+}
+.home-banner :deep(.el-carousel__indicator--horizontal.is-active button) {
   background: #fff;
 }
-.carousel-slide {
+.banner-slide {
+  display: block;
+  width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
 }
-.carousel-content {
-  text-align: center;
-  color: #fff;
-  padding: 0 32px;
-  max-width: 720px;
-}
-.carousel-title {
-  font-size: 40px;
-  font-weight: 800;
-  margin: 0 0 14px;
-  letter-spacing: 0.04em;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
-}
-.carousel-sub {
-  font-size: 20px;
-  margin: 0 0 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  opacity: 0.96;
-}
-.carousel-desc {
-  font-size: 15px;
-  margin: 0 0 28px;
-  opacity: 0.82;
-  line-height: 1.6;
-}
-.carousel-btn {
-  height: 48px;
-  padding: 0 34px;
-  font-size: 16px;
-  font-weight: 600;
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.92) !important;
-  border: none !important;
-  color: var(--green-deep) !important;
-}
-.carousel-btn:hover {
-  background: #fff !important;
-  transform: translateY(-1px);
+.banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 @media (max-width: 700px) {
-  .home-carousel :deep(.el-carousel__container) { height: 320px !important; }
-  .carousel-title { font-size: 28px; }
-  .carousel-sub { font-size: 16px; }
-  .carousel-desc { font-size: 13px; }
+  .home-banner :deep(.el-carousel__container) { height: 200px !important; }
 }
 
 /* ===== Hero ===== */

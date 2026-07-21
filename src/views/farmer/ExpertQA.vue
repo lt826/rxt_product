@@ -49,8 +49,10 @@ async function loadQuestions() {
 }
 
 async function handleSubmit() {
-  if (!form.value.title || !form.value.question) return ElMessage.warning('请填写问题标题和描述')
+  if (!form.value.title) return ElMessage.warning('请填写问题标题')
   if (!form.value.expertName) return ElMessage.warning('请选择要提问的专家')
+  const desc = (form.value.question || '').trim()
+  if (desc.length < 10) return ElMessage.warning('问题描述不得少于 10 个字，请补充详细内容')
   submitting.value = true
   try {
     const res = await askQuestionAPI({
@@ -147,7 +149,10 @@ onUnmounted(stopPolling)
           <el-input v-model="form.title" placeholder="简要描述您的问题" />
         </el-form-item>
         <el-form-item label="问题描述" required>
-          <el-input v-model="form.question" type="textarea" :rows="4" placeholder="详细描述您的问题" />
+          <el-input v-model="form.question" type="textarea" :rows="4" placeholder="详细描述您的问题（不少于 10 个字）" />
+          <div class="qa-desc-tip" :class="{ 'not-enough': (form.question || '').trim().length < 10 }">
+            至少 10 个字，当前 {{ (form.question || '').trim().length }} 字
+          </div>
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="submitting" size="large" class="submit-btn" @click="handleSubmit">提交问题</el-button>
@@ -219,6 +224,8 @@ onUnmounted(stopPolling)
 .page-title { font-size: 24px; font-weight: 800; color: var(--green-deep); margin: 0 0 4px; }
 .page-sub { font-size: 14px; color: var(--text-muted); margin: 0; }
 .ask-card { border-radius: var(--radius-md); }
+.qa-desc-tip { margin-top: 6px; font-size: 12px; color: var(--text-muted); }
+.qa-desc-tip.not-enough { color: var(--amber, #e08a1e); }
 .submit-btn { width: 100%; border-radius: var(--radius-sm); }
 .card-header-row { display: flex; justify-content: space-between; align-items: center; }
 .qa-item {

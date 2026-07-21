@@ -39,6 +39,13 @@ function updateQuantity(item, delta) {
   saveCart()
 }
 
+// 手动输入数量：限制在 1~99 并持久化
+function setQuantity(item, val) {
+  const n = parseInt(val)
+  item.quantity = isNaN(n) ? 1 : Math.min(99, Math.max(1, n))
+  saveCart()
+}
+
 function toggleItem(item, val) {
   item.selected = val
   saveCart()
@@ -126,7 +133,7 @@ onMounted(async () => {
           <div class="item-qty">
             <div class="qty-controls">
               <button class="qty-btn" @click="updateQuantity(item, -1)">−</button>
-              <input class="qty-input" type="number" :model-value="item.quantity" @change="item.quantity = parseInt($event.target.value) || 1" min="1" max="99" />
+              <input class="qty-input" type="number" :value="item.quantity" @change="setQuantity(item, $event.target.value)" min="1" max="99" />
               <button class="qty-btn" @click="updateQuantity(item, 1)">+</button>
             </div>
           </div>

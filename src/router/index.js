@@ -93,7 +93,8 @@ const routes = [
       { path: 'users', name: 'AdminUsers', component: () => import('../views/admin/Users.vue'), meta: { title: '用户管理' } },
       { path: 'goods', name: 'AdminGoods', component: () => import('../views/admin/Goods.vue'), meta: { title: '商品管理' } },
       { path: 'stats', name: 'AdminStats', component: () => import('../views/admin/Stats.vue'), meta: { title: '数据统计' } },
-      { path: 'home-feature', name: 'AdminHomeFeature', component: () => import('../views/admin/HomeFeature.vue'), meta: { title: '主页内容管理' } }
+      { path: 'home-feature', name: 'AdminHomeFeature', component: () => import('../views/admin/HomeFeature.vue'), meta: { title: '主页内容管理' } },
+      { path: 'carousel', name: 'AdminCarousel', component: () => import('../views/admin/Carousel.vue'), meta: { title: '轮播图管理' } }
     ]
   },
   // 个人中心 Profile —— 嵌在各角色端的 RoleLayout 内，顶部导航栏始终可见
