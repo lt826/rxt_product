@@ -1,27 +1,51 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getGoodsListAPI } from '../../api/goods'
 
 const router = useRouter()
-const route = useRoute()
 
-const cart = ref(JSON.parse(localStorage.getItem('rxt_cart') || '[]'))
+// 加载购物车；每个商品带 selected 勾选状态（默认勾选）
+const cart = ref(
+  JSON.parse(localStorage.getItem('rxt_cart') || '[]').map(item => ({
+    ...item,
+    selected: item.selected !== false
+  }))
+)
 const goodsCache = ref([])
 
-const totalAmount = computed(() => {
-  return cart.value.reduce((sum, item) => sum + (parseFloat(item.price) || 0) * item.quantity, 0)
-})
-
-const totalCount = computed(() => {
-  return cart.value.reduce((sum, item) => sum + item.quantity, 0)
-})
+// 购物车商品总件数（含未勾选）
+const totalCount = computed(() =>
+  cart.value.reduce((sum, item) => sum + item.quantity, 0)
+)
+// 已勾选商品件数
+const selectedCount = computed(() =>
+  cart.value.filter(i => i.selected).reduce((sum, item) => sum + item.quantity, 0)
+)
+// 已勾选商品合计金额
+const selectedAmount = computed(() =>
+  cart.value.filter(i => i.selected).reduce((sum, item) => sum + (parseFloat(item.price) || 0) * item.quantity, 0)
+)
+// 已勾选的商品
+const selectedItems = computed(() => cart.value.filter(i => i.selected))
+// 是否全选
+const allSelected = computed(() => cart.value.length > 0 && cart.value.every(i => i.selected))
 
 function updateQuantity(item, delta) {
   const newQty = item.quantity + delta
   if (newQty <= 0) return
   item.quantity = newQty
+  saveCart()
+}
+
+function toggleItem(item, val) {
+  item.selected = val
+  saveCart()
+}
+
+function toggleAll(val) {
+  cart.value.forEach(i => { i.selected = val })
   saveCart()
 }
 
@@ -45,7 +69,9 @@ function saveCart() {
 }
 
 function checkout() {
-  if (cart.value.length === 0) return ElMessage.warning('购物车为空')
+  if (!selectedItems.value.length) return ElMessage.warning('请选择要结算的商品')
+  // 仅把勾选的商品带入结算，未勾选的保留在购物车
+  localStorage.setItem('rxt_checkout_items', JSON.stringify(selectedItems.value))
   router.push('/buyer/checkout')
 }
 
@@ -67,7 +93,7 @@ onMounted(async () => {
     <div class="cart-header">
       <div>
         <h2>购物车</h2>
-        <p class="cart-count">{{ totalCount }} 件商品</p>
+        <p class="cart-count">已选 {{ selectedCount }} 件 / 共 {{ totalCount }} 件商品</p>
       </div>
       <el-button v-if="cart.length > 0" text type="danger" @click="clearCart">清空购物车</el-button>
     </div>
@@ -81,9 +107,9 @@ onMounted(async () => {
 
     <template v-else>
       <div class="cart-items">
-        <div v-for="item in cart" :key="item.id" class="cart-item-card">
+        <div v-for="item in cart" :key="item.id" class="cart-item-card" :class="{ unchecked: !item.selected }">
           <div class="item-check">
-            <el-checkbox :model-value="true" disabled />
+            <el-checkbox :model-value="item.selected" @change="(v) => toggleItem(item, v)" />
           </div>
           <div class="item-thumb">
             <img
@@ -118,16 +144,16 @@ onMounted(async () => {
       <!-- Summary bar -->
       <div class="cart-summary">
         <div class="summary-left">
-          <el-checkbox :model-value="true" disabled />
-          <span>全选</span>
+          <el-checkbox :model-value="allSelected" @change="(v) => toggleAll(v)">全选</el-checkbox>
+          <span class="summary-selected">已选 {{ selectedCount }} 件</span>
         </div>
         <div class="summary-right">
           <div class="summary-total">
             <span class="summary-label">合计：</span>
-            <span class="summary-price">¥{{ totalAmount.toFixed(2) }}</span>
+            <span class="summary-price">¥{{ selectedAmount.toFixed(2) }}</span>
           </div>
-          <el-button type="primary" size="large" class="checkout-btn" @click="checkout">
-            去结算 ({{ totalCount }}件)
+          <el-button type="primary" size="large" class="checkout-btn" :disabled="!selectedCount" @click="checkout">
+            去结算 ({{ selectedCount }}件)
           </el-button>
         </div>
       </div>
@@ -198,6 +224,9 @@ onMounted(async () => {
 }
 .cart-item-card:hover {
   box-shadow: var(--shadow-sm);
+}
+.cart-item-card.unchecked {
+  opacity: 0.55;
 }
 .item-check { flex-shrink: 0; }
 .item-thumb {
@@ -316,9 +345,12 @@ onMounted(async () => {
 .summary-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
   font-size: 14px;
   color: var(--text-secondary);
+}
+.summary-selected {
+  color: var(--text-muted);
 }
 .summary-right {
   display: flex;

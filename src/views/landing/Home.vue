@@ -57,6 +57,42 @@ const expertsFallback = [
   { name: '李依敏', specialty: '农学', org: '农村经济合作站', title: '高级工程师' }
 ]
 
+// 首页轮播图
+const carouselSlides = [
+  {
+    title: '农产品融销一体平台',
+    sub: '融通资金 · 链接产销 · 智汇农业',
+    desc: '为农户、买家、银行、专家打造的一站式协同服务平台',
+    btn: '免费注册',
+    to: '/register',
+    bg: 'linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #52b788 100%)'
+  },
+  {
+    title: '助农金融 · 随借随还',
+    sub: '多家银行入驻，贷款快速审批',
+    desc: '种植贷、创业贷、设备贷，利率优惠，助力扩大生产',
+    btn: '了解金融产品',
+    to: '/login',
+    bg: 'linear-gradient(135deg, #143a5e 0%, #1a5e8a 55%, #4a90b8 100%)'
+  },
+  {
+    title: '产地直供 · 新鲜直达',
+    sub: '直连农户，源头发货',
+    desc: '海量优质农产品，省去中间环节，品质价格双重保障',
+    btn: '进入农产品交易',
+    to: '/buyer/products',
+    bg: 'linear-gradient(135deg, #9c4a1a 0%, #e67e22 55%, #f0a04b 100%)'
+  },
+  {
+    title: '专家在线 · 科学种植',
+    sub: '农技问答 · 上门预约',
+    desc: '农业专家团队在线答疑，提供专业种植与病害防治指导',
+    btn: '咨询专家',
+    to: '/login',
+    bg: 'linear-gradient(135deg, #3e2a28 0%, #6d4c41 55%, #a1887f 100%)'
+  }
+]
+
 function mono(text) {
   const t = String(text || '').trim()
   return t ? t.charAt(0) : '农'
@@ -158,6 +194,22 @@ function enterRole(roleId) {
 
 <template>
   <div class="home-page">
+    <!-- ===== 轮播图 ===== -->
+    <section class="home-carousel">
+      <el-carousel height="500px" :interval="4500" arrow="hover">
+        <el-carousel-item v-for="(s, i) in carouselSlides" :key="i">
+          <div class="carousel-slide" :style="{ background: s.bg }">
+            <div class="carousel-content">
+              <h2 class="carousel-title">{{ s.title }}</h2>
+              <p class="carousel-sub">{{ s.sub }}</p>
+              <p class="carousel-desc">{{ s.desc }}</p>
+              <el-button size="large" class="carousel-btn" @click="router.push(s.to)">{{ s.btn }}</el-button>
+            </div>
+          </div>
+        </el-carousel-item>
+      </el-carousel>
+    </section>
+
     <!-- ===== Hero ===== -->
     <section class="hero">
       <div class="hero-bg">
@@ -337,6 +389,74 @@ function enterRole(roleId) {
 .home-page {
   font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   background: #fff;
+}
+
+/* ===== 轮播图 ===== */
+.home-carousel {
+  width: 100%;
+}
+.home-carousel :deep(.el-carousel__indicators) {
+  bottom: 22px;
+}
+.home-carousel :deep(.el-carousel__indicator--horizontal button) {
+  background: rgba(255, 255, 255, 0.55);
+}
+.home-carousel :deep(.el-carousel__indicator--horizontal.is-active button) {
+  background: #fff;
+}
+.carousel-slide {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+.carousel-content {
+  text-align: center;
+  color: #fff;
+  padding: 0 32px;
+  max-width: 720px;
+}
+.carousel-title {
+  font-size: 40px;
+  font-weight: 800;
+  margin: 0 0 14px;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+}
+.carousel-sub {
+  font-size: 20px;
+  margin: 0 0 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  opacity: 0.96;
+}
+.carousel-desc {
+  font-size: 15px;
+  margin: 0 0 28px;
+  opacity: 0.82;
+  line-height: 1.6;
+}
+.carousel-btn {
+  height: 48px;
+  padding: 0 34px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: none !important;
+  color: var(--green-deep) !important;
+}
+.carousel-btn:hover {
+  background: #fff !important;
+  transform: translateY(-1px);
+}
+@media (max-width: 700px) {
+  .home-carousel :deep(.el-carousel__container) { height: 320px !important; }
+  .carousel-title { font-size: 28px; }
+  .carousel-sub { font-size: 16px; }
+  .carousel-desc { font-size: 13px; }
 }
 
 /* ===== Hero ===== */

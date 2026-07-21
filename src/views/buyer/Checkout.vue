@@ -1,21 +1,38 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Loading, WarningFilled } from '@element-plus/icons-vue'
 import QRCode from 'qrcode'
 import { listAddressAPI } from '../../api/address'
-import { createOrderAPI } from '../../api/order'
+import { createOrderAPI, getBoughtOrdersAPI } from '../../api/order'
 import { getPayQrcodeAPI, queryPayStatusAPI, confirmPayAPI } from '../../api/pay'
 
 const router = useRouter()
-const cart = ref(JSON.parse(localStorage.getItem('rxt_cart') || '[]'))
+const route = useRoute()
+
+// 支付已存在的待付款订单：从「我的订单 - 去支付」带 orderId 进入
+const payOrderId = route.query.orderId ? Number(route.query.orderId) : null
+const isPayMode = computed(() => !!payOrderId)
+
+// 待结算商品：优先来自购物车勾选项（rxt_checkout_items），回退到整购物车
+const cart = ref(
+  JSON.parse(localStorage.getItem('rxt_checkout_items') || localStorage.getItem('rxt_cart') || '[]')
+)
 const addresses = ref([])
 const addressId = ref(null)
 const submitting = ref(false)
+const loading = ref(false)
+
+// 支付模式下，订单已有的收货信息（只读展示）
+const orderInfo = ref(null)
 
 const totalAmount = computed(() =>
   cart.value.reduce((sum, item) => sum + (parseFloat(item.price) || 0) * item.quantity, 0)
+)
+// 支付模式以订单原价为准确认
+const displayTotal = computed(() =>
+  isPayMode.value ? Number(orderInfo.value?.totalPrice ?? totalAmount.value) : totalAmount.value
 )
 
 const selectedAddress = computed(() => addresses.value.find(a => a.id === addressId.value))
@@ -42,7 +59,40 @@ async function loadAddresses() {
   } catch { /* ignore */ }
 }
 
+// 支付模式：拉取待支付订单详情，回填商品清单与金额
+async function loadPayOrder() {
+  loading.value = true
+  try {
+    const res = await getBoughtOrdersAPI()
+    if (res.code === 200) {
+      const o = (res.data || []).find(x => Number(x.purchaseId) === Number(payOrderId))
+      if (o) {
+        orderInfo.value = o
+        cart.value = (o.items || []).map(it => ({
+          id: it.goodsId,
+          title: it.title,
+          price: it.uninPrice,
+          quantity: it.count
+        }))
+        payAmount.value = Number(o.totalPrice) || 0
+      } else {
+        ElMessage.error('订单不存在或已支付')
+        router.replace('/buyer/orders')
+      }
+    }
+  } catch { /* 拦截器已提示 */ } finally {
+    loading.value = false
+  }
+}
+
 async function submitOrder() {
+  // 支付模式：订单已存在，直接拉起支付
+  if (isPayMode.value) {
+    if (!payOrderId) return
+    payAmount.value = displayTotal.value
+    startPayment(payOrderId)
+    return
+  }
   if (!cart.value.length) return ElMessage.warning('购物车为空')
   if (!addressId.value) return ElMessage.warning('请选择收货地址')
   submitting.value = true
@@ -60,9 +110,11 @@ async function submitOrder() {
     })
     if (res.code === 200) {
       const purchaseId = res.data?.purchaseId
-      // 订单已生成（待付款），清空购物车
-      cart.value = []
-      localStorage.setItem('rxt_cart', '[]')
+      // 仅移除本次下单的商品，保留未勾选的商品
+      const checkoutIds = cart.value.map(c => c.id)
+      const remaining = JSON.parse(localStorage.getItem('rxt_cart') || '[]').filter(c => !checkoutIds.includes(c.id))
+      localStorage.setItem('rxt_cart', JSON.stringify(remaining))
+      localStorage.removeItem('rxt_checkout_items')
       payAmount.value = amt
       if (purchaseId) {
         startPayment(purchaseId)
@@ -141,7 +193,7 @@ async function onConfirmPaid() {
 function handlePaidSuccess() {
   stopPolling()
   payDialogVisible.value = false
-  ElMessage.success('下单成功！')
+  ElMessage.success(isPayMode.value ? '支付成功！' : '下单成功！')
   setTimeout(() => router.push('/buyer/orders'), 600)
 }
 
@@ -149,41 +201,56 @@ function onPayDialogClose() {
   stopPolling()
 }
 
-onMounted(loadAddresses)
+onMounted(() => {
+  if (isPayMode.value) loadPayOrder()
+  else loadAddresses()
+})
 onUnmounted(() => stopPolling())
 </script>
 
 <template>
   <div class="checkout-page">
     <div class="checkout-header">
-      <h2>确认订单</h2>
-      <p class="checkout-sub">选择收货地址并提交订单</p>
+      <h2>{{ isPayMode ? '订单支付' : '确认订单' }}</h2>
+      <p class="checkout-sub">{{ isPayMode ? '完成该订单的支付' : '选择收货地址并提交订单' }}</p>
     </div>
 
     <el-row :gutter="24">
-      <el-col :xs="24" :sm="24" :md="16">
+      <el-col :xs="24" :sm="24" :md="16" v-loading="loading">
         <!-- 收货地址 -->
         <el-card shadow="never" class="checkout-card">
           <template #header><strong>收货地址</strong></template>
-          <div v-if="addresses.length">
-            <el-select v-model="addressId" placeholder="请选择收货地址" style="width: 100%" size="large">
-              <el-option
-                v-for="a in addresses"
-                :key="a.id"
-                :label="`${a.consignee} ${a.phone} ${a.addressDetail}`"
-                :value="a.id"
-              />
-            </el-select>
-            <div v-if="selectedAddress" class="addr-detail">
-              <div><span class="lbl">收货人</span>{{ selectedAddress.consignee }}</div>
-              <div><span class="lbl">电话</span>{{ selectedAddress.phone }}</div>
-              <div><span class="lbl">地址</span>{{ selectedAddress.addressDetail }}</div>
+          <!-- 支付模式：订单已有地址，只读展示 -->
+          <template v-if="isPayMode">
+            <div v-if="orderInfo" class="addr-detail">
+              <div><span class="lbl">收货人</span>{{ orderInfo.consignee }}</div>
+              <div><span class="lbl">电话</span>{{ orderInfo.consigneePhone }}</div>
+              <div><span class="lbl">地址</span>{{ orderInfo.address }}</div>
             </div>
-          </div>
-          <div v-else class="addr-empty">
-            <span>暂无收货地址</span>
-            <el-button type="primary" @click="router.push('/profile/address')">去添加</el-button>
-          </div>
+            <el-empty v-else description="订单信息加载中" :image-size="60" />
+          </template>
+          <!-- 下单模式：选择收货地址 -->
+          <template v-else>
+            <div v-if="addresses.length">
+              <el-select v-model="addressId" placeholder="请选择收货地址" style="width: 100%" size="large">
+                <el-option
+                  v-for="a in addresses"
+                  :key="a.id"
+                  :label="`${a.consignee} ${a.phone} ${a.addressDetail}`"
+                  :value="a.id"
+                />
+              </el-select>
+              <div v-if="selectedAddress" class="addr-detail">
+                <div><span class="lbl">收货人</span>{{ selectedAddress.consignee }}</div>
+                <div><span class="lbl">电话</span>{{ selectedAddress.phone }}</div>
+                <div><span class="lbl">地址</span>{{ selectedAddress.addressDetail }}</div>
+              </div>
+            </div>
+            <div v-else class="addr-empty">
+              <span>暂无收货地址</span>
+              <el-button type="primary" @click="router.push('/profile/address')">去添加</el-button>
+            </div>
+          </template>
         </el-card>
 
         <!-- 商品清单 -->
@@ -203,19 +270,21 @@ onUnmounted(() => stopPolling())
           <template #header><strong>订单摘要</strong></template>
           <div class="summary-total">
             <span>合计</span>
-            <span class="total-price">¥{{ totalAmount.toFixed(2) }}</span>
+            <span class="total-price">¥{{ Number(displayTotal).toFixed(2) }}</span>
           </div>
           <el-button
             type="primary"
             size="large"
             class="submit-btn"
             :loading="submitting"
-            :disabled="!cart.length || !addressId"
+            :disabled="isPayMode ? !cart.length : (!cart.length || !addressId)"
             @click="submitOrder"
           >
-            提交订单
+            {{ isPayMode ? '立即支付' : '提交订单' }}
           </el-button>
-          <el-button text class="back-btn" @click="router.push('/buyer/cart')">返回购物车</el-button>
+          <el-button text class="back-btn" @click="router.push(isPayMode ? '/buyer/orders' : '/buyer/cart')">
+            {{ isPayMode ? '返回订单' : '返回购物车' }}
+          </el-button>
         </el-card>
       </el-col>
     </el-row>

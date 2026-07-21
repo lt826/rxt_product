@@ -1,8 +1,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getBoughtOrdersAPI, receiveOrderAPI } from '../../api/order'
 
+const router = useRouter()
 const orders = ref([])
 const loading = ref(false)
 
@@ -25,7 +27,13 @@ async function confirmReceive(o) {
   } catch { /* 取消 */ }
 }
 
+// 待付款订单：跳转到订单结算界面继续支付
+function payOrder(o) {
+  router.push('/buyer/checkout?orderId=' + o.purchaseId)
+}
+
 function tagType(s) {
+  if (s === 1) return 'danger'
   if (s === 2) return 'warning'
   if (s === 3) return 'primary'
   if (s === 4) return 'success'
@@ -75,6 +83,7 @@ onMounted(load)
 
         <div class="order-foot">
           <div class="total">合计：<span class="price">¥{{ o.totalPrice }}</span></div>
+          <el-button v-if="o.status === 1" type="primary" @click="payOrder(o)">去支付</el-button>
           <el-button v-if="o.status === 3" type="primary" @click="confirmReceive(o)">确认收货</el-button>
         </div>
       </el-card>

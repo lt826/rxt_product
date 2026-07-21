@@ -6,6 +6,7 @@ import { getSoldOrdersAPI, shipOrderAPI } from '../../api/order'
 import { listAddressAPI } from '../../api/address'
 import { useUserStore } from '../../stores/user'
 import { ensureFarmerContactReady } from '../../utils/farmerContact'
+import { pcaTextArr, joinArea, parseArea } from '../../utils/chinaArea'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -16,7 +17,9 @@ const loading = ref(false)
 // 发货弹窗
 const shipVisible = ref(false)
 const shipping = ref(false)
-const shipForm = ref({ purchaseId: null, shipAddress: '', shipName: '', shipPhone: '' })
+// shipArea 为省市县级联数组，shipStreet 为详细地址；提交时拼成 shipAddress
+const shipForm = ref({ purchaseId: null, shipAddress: '', shipArea: [], shipStreet: '', shipName: '', shipPhone: '' })
+const cascaderProps = { expandTrigger: 'hover' }
 // 当前农户的发货地址列表与默认地址（用于发货时自动带入 / 快速选择）
 const addressList = ref([])
 const defaultAddr = ref(null)
@@ -50,7 +53,9 @@ function pickAddress(id) {
   if (!addr) return
   shipForm.value.shipName = addr.consignee || ''
   shipForm.value.shipPhone = addr.phone || ''
-  shipForm.value.shipAddress = addr.addressDetail || ''
+  const { area, street } = parseArea(addr.addressDetail || '')
+  shipForm.value.shipArea = area
+  shipForm.value.shipStreet = street
 }
 
 async function openShip(o) {
@@ -62,9 +67,12 @@ async function openShip(o) {
   if (!ok) return
   // 优先沿用订单已有物流信息，否则自动带入默认发货地址
   const base = defaultAddr.value
+  const { area, street } = parseArea(o.shipAddress || base?.addressDetail || '')
   shipForm.value = {
     purchaseId: o.purchaseId,
     shipAddress: o.shipAddress || base?.addressDetail || '',
+    shipArea: area,
+    shipStreet: street,
     shipName: o.shipName || base?.consignee || '',
     shipPhone: o.shipPhone || base?.phone || ''
   }
@@ -73,13 +81,13 @@ async function openShip(o) {
 }
 
 async function submitShip() {
-  if (!shipForm.value.shipAddress) return ElMessage.warning('请填写发货地址')
+  if (!shipForm.value.shipArea || shipForm.value.shipArea.length === 0) return ElMessage.warning('请选择发货地区')
   if (!shipForm.value.shipName) return ElMessage.warning('请填写发货人姓名')
   if (!shipForm.value.shipPhone) return ElMessage.warning('请填写发货人电话')
   shipping.value = true
   try {
     const res = await shipOrderAPI(shipForm.value.purchaseId, {
-      shipAddress: shipForm.value.shipAddress,
+      shipAddress: joinArea(shipForm.value.shipArea, shipForm.value.shipStreet),
       shipName: shipForm.value.shipName,
       shipPhone: shipForm.value.shipPhone
     })
@@ -170,8 +178,18 @@ onMounted(() => {
         <el-form-item label="发货人电话">
           <el-input v-model="shipForm.shipPhone" placeholder="请填写发货人电话" />
         </el-form-item>
-        <el-form-item label="发货地址">
-          <el-input v-model="shipForm.shipAddress" type="textarea" :rows="2" placeholder="请填写发货地址" />
+        <el-form-item label="发货地区">
+          <el-cascader
+            v-model="shipForm.shipArea"
+            :options="pcaTextArr"
+            :props="cascaderProps"
+            filterable
+            placeholder="请选择 省 / 市 / 区县"
+            style="width:100%"
+          />
+        </el-form-item>
+        <el-form-item label="详细地址">
+          <el-input v-model="shipForm.shipStreet" type="textarea" :rows="2" placeholder="街道、门牌号等详细信息（选填）" />
         </el-form-item>
       </el-form>
       <template #footer>

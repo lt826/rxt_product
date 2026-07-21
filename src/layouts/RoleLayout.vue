@@ -152,7 +152,8 @@ function navigate(path) {
 }
 
 function goHome() {
-  router.push('/')
+  // 跳转到站点首页（localhost:3000，落地页）
+  window.location.href = window.location.origin
 }
 
 async function handleLogout() {

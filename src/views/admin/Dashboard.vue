@@ -193,14 +193,8 @@ function buildChartOption() {
         symbol: 'circle',
         symbolSize: 6,
         lineStyle: { color: '#409eff', width: 2 },
-        itemStyle: { color: '#409eff' },
-        label: {
-          show: true,
-          position: 'top',
-          color: '#409eff',
-          fontSize: 10,
-          formatter: p => p.value > 0 ? p.value : ''
-        }
+        itemStyle: { color: '#409eff' }
+        // 折线不显示数值标签：柱状图顶部已显示同一数值，避免数字重叠
       }
     ]
   }

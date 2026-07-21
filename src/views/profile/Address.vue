@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useUserStore } from '../../stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listAddressAPI, addAddressAPI, updateAddressAPI, deleteAddressAPI } from '../../api/address'
+import { pcaTextArr, joinArea, parseArea } from '../../utils/chinaArea'
 
 const userStore = useUserStore()
 
@@ -10,15 +11,18 @@ const userStore = useUserStore()
 const isFarmer = computed(() => userStore.role === 'farmer')
 const pageTitle = computed(() => isFarmer.value ? '发货地址管理' : '收货地址管理')
 const personLabel = computed(() => isFarmer.value ? '发货人' : '收货人')
-const detailLabel = computed(() => isFarmer.value ? '发货地址' : '收货地址')
+const areaLabel = computed(() => isFarmer.value ? '发货地区' : '收货地区')
 
 const addresses = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
 const editingId = ref(null)
 const submitting = ref(false)
-const emptyForm = () => ({ consignee: '', phone: '', addressDetail: '', isDefault: false })
+// 表单：area 为省市县级联数组，street 为详细地址；保存时拼成 addressDetail
+const emptyForm = () => ({ consignee: '', phone: '', area: [], street: '', isDefault: false })
 const form = ref(emptyForm())
+
+const cascaderProps = { expandTrigger: 'hover' }
 
 const dialogTitle = computed(() => editingId.value ? '编辑地址' : (isFarmer.value ? '添加发货地址' : '添加收货地址'))
 
@@ -42,19 +46,23 @@ function openAdd() {
 
 function openEdit(row) {
   editingId.value = row.id
-  form.value = { consignee: row.consignee, phone: row.phone, addressDetail: row.addressDetail, isDefault: row.isDefault }
+  const { area, street } = parseArea(row.addressDetail)
+  form.value = { consignee: row.consignee, phone: row.phone, area, street, isDefault: row.isDefault }
   dialogVisible.value = true
 }
 
 async function submit() {
-  if (!form.value.consignee || !form.value.phone || !form.value.addressDetail) {
+  if (!form.value.consignee || !form.value.phone) {
     return ElMessage.warning('请填写完整信息')
+  }
+  if (!form.value.area || form.value.area.length === 0) {
+    return ElMessage.warning('请选择所在地区')
   }
   submitting.value = true
   const payload = {
     consignee: form.value.consignee,
     phone: form.value.phone,
-    addressDetail: form.value.addressDetail,
+    addressDetail: joinArea(form.value.area, form.value.street),
     isDefault: form.value.isDefault ? 1 : 0
   }
   try {
@@ -115,11 +123,23 @@ async function toggleDefault(row) {
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
-      <el-form :model="form" label-width="80px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="540px">
+      <el-form :model="form" label-width="90px">
         <el-form-item :label="personLabel"><el-input v-model="form.consignee" /></el-form-item>
         <el-form-item label="手机号"><el-input v-model="form.phone" /></el-form-item>
-        <el-form-item :label="detailLabel"><el-input v-model="form.addressDetail" type="textarea" :rows="3" /></el-form-item>
+        <el-form-item :label="areaLabel">
+          <el-cascader
+            v-model="form.area"
+            :options="pcaTextArr"
+            :props="cascaderProps"
+            filterable
+            placeholder="请选择 省 / 市 / 区县"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="详细地址">
+          <el-input v-model="form.street" type="textarea" :rows="2" placeholder="街道、门牌号等详细信息（选填）" />
+        </el-form-item>
         <el-form-item label="默认地址"><el-switch v-model="form.isDefault" /></el-form-item>
       </el-form>
       <template #footer>
