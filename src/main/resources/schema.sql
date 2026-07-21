@@ -394,3 +394,16 @@ CREATE TABLE tb_homepage_feature (
     PRIMARY KEY (id),
     UNIQUE KEY uk_section_ref (section_key, ref_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='首页各板块精选内容';
+
+-- ==============================================
+-- 21. 首页轮播图表
+-- ==============================================
+DROP TABLE IF EXISTS tb_home_carousel;
+CREATE TABLE tb_home_carousel (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    image_url   VARCHAR(500) NOT NULL COMMENT '图片地址',
+    link        VARCHAR(500) DEFAULT NULL COMMENT '点击跳转链接(可空)',
+    sort_order  INT          NOT NULL DEFAULT 0 COMMENT '展示顺序,升序',
+    create_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='首页轮播图';

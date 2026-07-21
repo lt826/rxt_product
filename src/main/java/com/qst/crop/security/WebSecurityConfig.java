@@ -67,6 +67,10 @@ public class WebSecurityConfig {
                         .requestMatchers("/api/v1/homepage-feature/list").permitAll()
                         .requestMatchers("/api/v1/homepage-feature/section/**").hasRole("ADMIN")
 
+                        // 首页轮播图：列表公开（首页访客可看），增删改仅管理员
+                        .requestMatchers("/api/v1/home-carousel/list").permitAll()
+                        .requestMatchers("/api/v1/home-carousel/**").hasRole("ADMIN")
+
                         // 认证接口：其他所有请求都需要登录
                         .anyRequest().authenticated()
                 )
