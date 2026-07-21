@@ -85,7 +85,7 @@ const carouselSlides = [
   },
   {
     title: '专家在线 · 科学种植',
-    sub: '农技问答 · 上门预约',
+    sub: '知识问答 · 上门预约',
     desc: '农业专家团队在线答疑，提供专业种植与病害防治指导',
     btn: '咨询专家',
     to: '/login',
@@ -236,7 +236,7 @@ function enterRole(roleId) {
           <div class="hero-stat-divider"></div>
           <div class="hero-stat">
             <span class="stat-number">一站式</span>
-            <span class="stat-text">融资 · 产销 · 农技全流程</span>
+            <span class="stat-text">融资 · 产销 · 知识全流程</span>
           </div>
           <div class="hero-stat-divider"></div>
           <div class="hero-stat">

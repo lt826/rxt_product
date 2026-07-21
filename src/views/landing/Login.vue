@@ -79,7 +79,7 @@ function goToRegister() {
             <div class="stat-label">农产品直达买家</div>
           </div>
           <div class="stat-item">
-            <div class="stat-num">农技</div>
+            <div class="stat-num">知识</div>
             <div class="stat-label">专家在线指导</div>
           </div>
         </div>

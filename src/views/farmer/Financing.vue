@@ -231,8 +231,8 @@ function selectMatchPartner(partner) {
 
 // 匹配度等级
 function getMatchLevel(score) {
-  if (score >= 80) return { text: '高匹配', type: 'success' }
-  if (score >= 60) return { text: '中匹配', type: 'warning' }
+  if (score >= 65) return { text: '高匹配', type: 'success' }
+  if (score >= 40) return { text: '中匹配', type: 'warning' }
   return { text: '低匹配', type: 'info' }
 }
 
