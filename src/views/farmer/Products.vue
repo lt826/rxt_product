@@ -7,7 +7,6 @@ import { useUserStore } from '../../stores/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Delete, Search } from '@element-plus/icons-vue'
 import { parseCategory, cleanContent } from '../../utils/goods'
-import { ensureFarmerContactReady } from '../../utils/farmerContact'
 import ProductCard from '../../components/ProductCard.vue'
 
 const router = useRouter()
@@ -162,13 +161,9 @@ function useImageUrl() {
   }
 }
 
-async function openPublishDialog() {
-  // 发布商品前校验：农户必须已填写手机号和地址
-  const ok = await ensureFarmerContactReady({
-    userName: userStore.userInfo?.userName,
-    router
-  })
-  if (!ok) return
+function openPublishDialog() {
+  // 发布商品时直接使用表单里的「产地地址」作为发货地址即可，
+  // 不再强制要求先在「基本信息」里填写地址。
   editingId.value = null
   form.value = { title: '', price: null, content: '', type: '', address: '', picture: '' }
   imageFile.value = null

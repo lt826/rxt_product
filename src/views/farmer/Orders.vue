@@ -5,7 +5,6 @@ import { ElMessage } from 'element-plus'
 import { getSoldOrdersAPI, shipOrderAPI } from '../../api/order'
 import { listAddressAPI } from '../../api/address'
 import { useUserStore } from '../../stores/user'
-import { ensureFarmerContactReady } from '../../utils/farmerContact'
 import { pcaTextArr, joinArea, parseArea } from '../../utils/chinaArea'
 
 const router = useRouter()
@@ -59,13 +58,8 @@ function pickAddress(id) {
 }
 
 async function openShip(o) {
-  // 发货前校验：农户必须已填写手机号和地址
-  const ok = await ensureFarmerContactReady({
-    userName: userStore.userInfo?.userName,
-    router
-  })
-  if (!ok) return
-  // 优先沿用订单已有物流信息，否则自动带入默认发货地址
+  // 发货时直接使用发货弹窗里填写的「发货地址」即可（若有已保存的发货地址会自动带入），
+  // 不再强制要求先在「基本信息」里填写地址。
   const base = defaultAddr.value
   const { area, street } = parseArea(o.shipAddress || base?.addressDetail || '')
   shipForm.value = {

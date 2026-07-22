@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h2 class="page-title">首页轮播图管理</h2>
-        <p class="page-sub">上传首页轮播图片并调整顺序；首页每张图片展示 5 秒</p>
+        <p class="page-sub">上传首页轮播图片并调整顺序；首页每张图片展示 3 秒，点击可放大查看大图</p>
       </div>
     </div>
 

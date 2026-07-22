@@ -314,7 +314,10 @@ onUnmounted(() => {
           </div>
         </el-popover>
         <div class="user-pill" @click="router.push('/profile/center')" style="cursor:pointer">
-          <span class="user-avatar-circle">{{ (userStore.nickName || userStore.userInfo?.userName || 'U')[0] }}</span>
+          <span class="user-avatar-circle">
+            <img v-if="userStore.avatar" :src="userStore.avatar" class="user-avatar-img" alt="头像" />
+            <template v-else>{{ (userStore.nickName || userStore.userInfo?.userName || 'U')[0] }}</template>
+          </span>
           <span class="user-name">{{ userStore.nickName || userStore.userInfo?.roleName || '用户' }}</span>
         </div>
         <el-button text size="small" class="logout-btn" @click="handleLogout">
@@ -532,6 +535,13 @@ onUnmounted(() => {
   font-size: 14px;
   font-weight: 700;
   flex-shrink: 0;
+  overflow: hidden;
+}
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .user-name {
   font-size: 14px;

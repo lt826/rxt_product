@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getGoodsListAPI } from '../../api/goods'
 import { getKnowledgeListAPI } from '../../api/knowledge'
@@ -60,6 +60,27 @@ const expertsFallback = [
 
 // 首页轮播图（管理员上传，展示在平台入口上方，无图则隐藏）
 const carouselImages = ref([])
+
+// 轮播图交互：统一固定高度 + 点击放大 + 再点击查看大图
+const bannerHeight = '420px'           // 固定高度，配合 object-fit:cover，让每张图大小一致、整齐美观
+const enlargedIndex = ref(-1)          // 当前「稍微放大」的图片序号；-1 表示无
+const viewerVisible = ref(false)       // 大图查看器是否打开
+const viewerIndex = ref(0)             // 大图查看器起始序号
+const viewerImages = computed(() => carouselImages.value.map(c => c.imageUrl).filter(Boolean))
+
+// 点击轮播图：第一次稍微放大，第二次打开大图查看器
+function onBannerClick(i) {
+  if (enlargedIndex.value === i) {
+    viewerIndex.value = i
+    viewerVisible.value = true
+  } else {
+    enlargedIndex.value = i
+  }
+}
+// 自动切换到下一张时，重置「放大」状态
+function onCarouselChange() {
+  enlargedIndex.value = -1
+}
 
 function mono(text) {
   const t = String(text || '').trim()
@@ -133,21 +154,21 @@ onMounted(async () => {
 
     // 农业知识：有精选则覆盖，否则走原接口，再否则静态兜底
     if (fKnowledge.length) {
-      knowledgeItems.value = fKnowledge.slice(0, 3).map(k => ({ id: k.knowledgeId, title: k.title, content: k.content }))
+      knowledgeItems.value = fKnowledge.slice(0, 3).map(k => ({ id: k.knowledgeId, title: k.title, content: k.content, picture: k.picPath }))
     } else if (knowRes.status === 'fulfilled' && knowRes.value?.code === 200 && knowRes.value.data?.length > 0) {
       knowledgeItems.value = knowRes.value.data.slice(0, 3).map((k) => ({
-        id: k.knowledgeId, title: k.title, content: k.content
+        id: k.knowledgeId, title: k.title, content: k.content, picture: k.picPath
       }))
     } else {
       knowledgeItems.value = knowledgeItemsStatic
     }
 
-    // 助农电商：有精选则覆盖，否则走原接口，再否则静态兜底
+    // 助农电商：有精选则覆盖，否则走原接口，再否则静态兜底（均带上商品图片）
     if (fGoods.length) {
-      shopItems.value = fGoods.slice(0, 5).map(g => ({ id: g.goodsId, name: g.title, price: g.price ? `¥${g.price}` : '面议' }))
+      shopItems.value = fGoods.slice(0, 5).map(g => ({ id: g.goodsId, name: g.title, price: g.price ? `¥${g.price}` : '面议', picture: g.picture }))
     } else if (goodsRes.status === 'fulfilled' && goodsRes.value?.code === 200 && goodsRes.value.data?.length > 0) {
       shopItems.value = goodsRes.value.data.slice(0, 5).map((g) => ({
-        id: g.goodsId, name: g.title, price: g.price ? `¥${g.price}` : '面议'
+        id: g.goodsId, name: g.title, price: g.price ? `¥${g.price}` : '面议', picture: g.picture
       }))
     } else {
       shopItems.value = shopFallback
@@ -205,18 +226,31 @@ function enterRole(roleId) {
       </div>
     </section>
 
-    <!-- ===== 首页轮播图（管理员上传，每张 5 秒） ===== -->
+    <!-- ===== 首页轮播图（管理员上传，每张 3 秒自动切换；点击放大，再点击查看大图，大图右上角 × 退出） ===== -->
     <section v-if="carouselImages.length" class="home-banner">
-      <el-carousel height="340px" :interval="5000" arrow="hover">
+      <el-carousel :height="bannerHeight" :interval="3000" arrow="hover" @change="onCarouselChange">
         <el-carousel-item v-for="(img, i) in carouselImages" :key="img.id || i">
-          <a v-if="img.link" :href="img.link" target="_blank" rel="noopener" class="banner-slide">
+          <div
+            class="banner-slide"
+            :class="{ 'banner-enlarged': enlargedIndex === i }"
+            @click="onBannerClick(i)"
+          >
             <img :src="img.imageUrl" :alt="'轮播图 ' + (i + 1)" class="banner-img" />
-          </a>
-          <div v-else class="banner-slide">
-            <img :src="img.imageUrl" :alt="'轮播图 ' + (i + 1)" class="banner-img" />
+            <span v-if="img.link" class="banner-link-tag">可跳转</span>
+            <span class="banner-hint">点击查看大图</span>
           </div>
         </el-carousel-item>
       </el-carousel>
+
+      <!-- 大图查看器（自带右上角 × 关闭按钮） -->
+      <el-image-viewer
+        v-if="viewerVisible"
+        :url-list="viewerImages"
+        :initial-index="viewerIndex"
+        :z-index="3500"
+        hide-on-click-modal
+        @close="viewerVisible = false"
+      />
     </section>
 
     <!-- ===== 平台入口 ===== -->
@@ -308,7 +342,16 @@ function enterRole(roleId) {
       </div>
       <div class="knowledge-grid">
         <div v-for="(item, i) in knowledgeItems" :key="i" class="knowledge-card">
-          <div class="knowledge-card-icon"><el-icon :size="40"><Reading /></el-icon></div>
+          <div class="knowledge-card-media">
+            <img
+              v-if="item.picture && /^https?:\/\//i.test(String(item.picture))"
+              :src="item.picture"
+              :alt="item.title"
+              class="knowledge-card-img"
+              loading="lazy"
+            />
+            <el-icon v-else :size="40"><Reading /></el-icon>
+          </div>
           <div class="knowledge-card-body">
             <h3>{{ item.title }}</h3>
             <p>{{ item.content ? (item.content.length > 100 ? item.content.substring(0, 100) + '…' : item.content) : '' }}</p>
@@ -326,7 +369,16 @@ function enterRole(roleId) {
       </div>
       <div class="shop-grid">
         <div v-for="(item, i) in shopItems" :key="i" class="shop-card" @click="item.id && router.push('/buyer/goods/' + item.id)">
-          <div class="shop-card-icon">{{ mono(item.name) }}</div>
+          <div class="shop-card-media">
+            <img
+              v-if="item.picture && /^https?:\/\//i.test(String(item.picture))"
+              :src="item.picture"
+              :alt="item.name"
+              class="shop-card-img"
+              loading="lazy"
+            />
+            <span v-else class="shop-card-icon">{{ mono(item.name) }}</span>
+          </div>
           <div class="shop-card-body">
             <div class="shop-card-name">{{ item.name }}</div>
             <div class="shop-card-price">{{ item.price }}</div>
@@ -345,12 +397,6 @@ function enterRole(roleId) {
           <span class="footer-icon" style="color:#fff"><LogoMark :size="22" /></span>
           <span class="footer-name">融销通</span>
         </div>
-        <div class="footer-links">
-          <a href="#">关于我们</a>
-          <a href="#">联系方式</a>
-          <a href="#">服务条款</a>
-          <a href="#">隐私政策</a>
-        </div>
         <p class="footer-copy">农产品融销一体平台 &copy; 2026</p>
       </div>
     </footer>
@@ -365,15 +411,18 @@ function enterRole(roleId) {
 
 /* ===== 首页轮播图 ===== */
 .home-banner {
+  position: relative;
+  z-index: 5;
   width: 100%;
   max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px 24px 0;
+  margin: -56px auto 0;
+  padding: 0 24px;
   box-sizing: border-box;
 }
 .home-banner :deep(.el-carousel__container) {
   border-radius: var(--radius-md);
   overflow: hidden;
+  box-shadow: 0 24px 60px -16px rgba(16, 56, 42, 0.45);
 }
 .home-banner :deep(.el-carousel__indicators) {
   bottom: 16px;
@@ -385,18 +434,52 @@ function enterRole(roleId) {
   background: #fff;
 }
 .banner-slide {
+  position: relative;
   display: block;
   width: 100%;
   height: 100%;
+  cursor: pointer;
+  background: #14342a;
 }
 .banner-img {
   width: 100%;
   height: 100%;
+  /* cover：统一铺满容器，每张图大小一致、整齐美观（超出部分裁切） */
   object-fit: cover;
   display: block;
+  transition: transform 0.3s ease;
+}
+/* 第一次点击：稍微放大 */
+.banner-slide.banner-enlarged .banner-img {
+  transform: scale(1.06);
+}
+.banner-link-tag {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  pointer-events: none;
+}
+.banner-hint {
+  position: absolute;
+  bottom: 12px;
+  right: 14px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  pointer-events: none;
+  opacity: 0.85;
 }
 @media (max-width: 700px) {
-  .home-banner :deep(.el-carousel__container) { height: 200px !important; }
+  .home-banner { margin-top: 12px; }
+  .home-banner :deep(.el-carousel__container) { height: 220px !important; }
+  .banner-hint { display: none; }
 }
 
 /* ===== Hero ===== */
@@ -788,15 +871,26 @@ function enterRole(roleId) {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
-.knowledge-card-icon {
-  width: 100px;
-  min-height: 140px;
+.knowledge-card-media {
+  width: 120px;
+  min-height: 160px;
   background: var(--green-mist);
   color: var(--green);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
+}
+.knowledge-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+.knowledge-card:hover .knowledge-card-img {
+  transform: scale(1.06);
 }
 .knowledge-card-body {
   flex: 1;
@@ -836,15 +930,28 @@ function enterRole(roleId) {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
-.shop-card-icon {
+.shop-card-media {
   height: 140px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(135deg, var(--green-mist), #eef7f0);
+}
+.shop-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+.shop-card:hover .shop-card-img {
+  transform: scale(1.06);
+}
+.shop-card-icon {
   font-size: 56px;
   font-weight: 700;
   color: var(--green-deep);
-  background: linear-gradient(135deg, var(--green-mist), #eef7f0);
 }
 .shop-card-body { padding: 12px 14px; }
 .shop-card-name {
@@ -889,19 +996,6 @@ function enterRole(roleId) {
   color: #fff;
   letter-spacing: 0.08em;
 }
-.footer-links {
-  display: flex;
-  justify-content: center;
-  gap: 28px;
-  margin-bottom: 16px;
-}
-.footer-links a {
-  color: rgba(255,255,255,0.7);
-  text-decoration: none;
-  font-size: 14px;
-  transition: color 0.2s;
-}
-.footer-links a:hover { color: #fff; }
 .footer-copy {
   font-size: 13px;
   opacity: 0.5;

@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 import { getUserInfoAPI } from '../../api/user'
+import { maskPhone } from '../../utils/phone'
 import { getFansCountAPI } from '../../api/follow'
 import { ArrowLeft } from '@element-plus/icons-vue'
 
@@ -130,7 +131,7 @@ function def(v) { return (v === null || v === undefined || v === '') ? '-' : v }
         <el-descriptions-item label="用户名">{{ def(profile.userName) }}</el-descriptions-item>
         <el-descriptions-item label="昵称">{{ def(profile.nickName) }}</el-descriptions-item>
         <el-descriptions-item label="真实姓名">{{ def(profile.realName) }}</el-descriptions-item>
-        <el-descriptions-item label="手机号">{{ def(profile.phone) }}</el-descriptions-item>
+        <el-descriptions-item label="手机号">{{ profile.phone ? maskPhone(profile.phone) : '-' }}</el-descriptions-item>
         <el-descriptions-item label="地址" :span="2">{{ def(profile.address) }}</el-descriptions-item>
         <el-descriptions-item label="头像">
           <el-avatar :size="40" :src="profile.avatar">
